@@ -1,0 +1,49 @@
+Here are the steps to run the TripCraft AI Travel Planner in your Codespace:
+
+🚀 Running the Application
+Prerequisites
+Make sure you have the .env files configured:
+
+Backend (.env):
+OPENROUTER_API_KEY=your_key
+EXA_API_KEY=your_key
+FIRECRAWL_API_KEY=your_key
+DATABASE_URL=postgresql+asyncpg://user:pass@host/db?ssl=require
+
+
+Frontend (.env.local):
+DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
+BETTER_AUTH_SECRET=your_secret
+BACKEND_API_URL=http://localhost:8000
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
+
+
+Step 1: Start the Backend (Terminal 1)
+cd /workspaces/travel-agent/travel-agent/backend
+python -m uvicorn main:app --host 0.0.0.0 --port 8000
+
+Verify it's running:
+curl http://localhost:8000/api/health
+# Should return: {"status":"healthy",...}
+
+Step 2: Start the Frontend (Terminal 2)
+cd /workspaces/travel-agent/travel-agent/client
+npm run dev
+
+The frontend will start on http://localhost:3000
+
+Step 3: Access the App
+Open port 3000 in your browser (Codespaces will show a popup or use the Ports tab)
+Sign up / Sign in
+Create a new trip plan
+Wait ~90-120 seconds for AI agents to generate the itinerary
+🔧 Quick Reference
+Service	Port	Command	Directory
+Backend	8000	python -m uvicorn main:app --host 0.0.0.0 --port 8000	backend/
+Frontend	3000	npm run dev	client/
+🛑 Stopping Services
+📋 Troubleshooting
+Backend not starting? Check if port 8000 is in use: lsof -i :8000
+Frontend not starting? Check if port 3000 is in use: lsof -i :3000
+Database errors? Verify DATABASE_URL in both .env files
+API key errors? Ensure OpenRouter, Exa, and Firecrawl keys are valid
