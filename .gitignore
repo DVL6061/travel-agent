@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+awesome-llm-apps/
 
 # Build outputs
 .next/
