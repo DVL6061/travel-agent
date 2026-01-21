@@ -268,7 +268,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/workspaces/travel-agent/travel-agent/client/lib/generated/prisma",
+      "value": "C:\\Users\\dhruv\\.gemini\\antigravity\\scratch\\github-travel-agent(Working)\\travel-agent\\travel-agent\\client\\lib\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -277,12 +277,12 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "debian-openssl-1.1.x",
+        "value": "windows",
         "native": true
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/workspaces/travel-agent/travel-agent/client/prisma/schema.prisma",
+    "sourceFilePath": "C:\\Users\\dhruv\\.gemini\\antigravity\\scratch\\github-travel-agent(Working)\\travel-agent\\travel-agent\\client\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -295,6 +295,7 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
@@ -343,8 +344,8 @@ exports.PrismaClient = PrismaClient
 Object.assign(exports, Prisma)
 
 // file annotations for bundling tools to include these files
-path.join(__dirname, "libquery_engine-debian-openssl-1.1.x.so.node");
-path.join(process.cwd(), "lib/generated/prisma/libquery_engine-debian-openssl-1.1.x.so.node")
+path.join(__dirname, "query_engine-windows.dll.node");
+path.join(process.cwd(), "lib/generated/prisma/query_engine-windows.dll.node")
 // file annotations for bundling tools to include these files
 path.join(__dirname, "schema.prisma");
 path.join(process.cwd(), "lib/generated/prisma/schema.prisma")

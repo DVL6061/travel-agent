@@ -267,7 +267,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/workspaces/travel-agent/travel-agent/client/lib/generated/prisma",
+      "value": "C:\\Users\\dhruv\\.gemini\\antigravity\\scratch\\github-travel-agent(Working)\\travel-agent\\travel-agent\\client\\lib\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -276,12 +276,12 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "debian-openssl-1.1.x",
+        "value": "windows",
         "native": true
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/workspaces/travel-agent/travel-agent/client/prisma/schema.prisma",
+    "sourceFilePath": "C:\\Users\\dhruv\\.gemini\\antigravity\\scratch\\github-travel-agent(Working)\\travel-agent\\travel-agent\\client\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -294,6 +294,7 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
