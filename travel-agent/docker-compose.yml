@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: tripcraft-db
+    environment:
+      POSTGRES_USER: tripcraft_user
+      POSTGRES_PASSWORD: tripcraft_password
+      POSTGRES_DB: tripcraft_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tripcraft_user -d tripcraft_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tripcraft-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.local
+    container_name: tripcraft-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://tripcraft_user:tripcraft_password@postgres:5432/tripcraft_db
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - EXA_API_KEY=${EXA_API_KEY}
+      - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    networks:
+      - tripcraft-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: tripcraft-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_BASE_URL=http://localhost:3000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - BACKEND_API_URL=http://backend:8000
+      - DATABASE_URL=postgresql://tripcraft_user:tripcraft_password@postgres:5432/tripcraft_db
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-tripcraft-secret-key}
+    depends_on:
+      - backend
+      - postgres
+    networks:
+      - tripcraft-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  tripcraft-network:
+    driver: bridge
