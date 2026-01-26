@@ -47,3 +47,45 @@ Backend not starting? Check if port 8000 is in use: lsof -i :8000
 Frontend not starting? Check if port 3000 is in use: lsof -i :3000
 Database errors? Verify DATABASE_URL in both .env files
 API key errors? Ensure OpenRouter, Exa, and Firecrawl keys are valid
+
+
+
+
+starting Backend into antigravity:-
+
+1> cd travel-agent\backend
+
+2> .\venv\Scripts\activate
+
+3> python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+
+
+
+starting frontend into antigravity:-
+
+1> cd travel-agent\client
+$env:NODE_OPTIONS="--max-old-space-size=4096"
+2> npm run dev
+
+
+
+
+
+
+
+
+cd travel-agent\backend
+Remove-Item -Recurse -Force venv
+python -m venv venv
+.\venv\Scripts\activate
+pip install --upgrade pip
+pip install uv
+uv pip install -e .
+
+cd travel-agent\backend
+.\venv\Scripts\activate
+python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+
+
+cd travel-agent\client
+npm run dev

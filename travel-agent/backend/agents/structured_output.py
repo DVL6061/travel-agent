@@ -12,25 +12,19 @@ T = TypeVar("T", bound=BaseModel)
 
 def clean_json_string(json_str: str) -> str:
     """
-    Clean a JSON string by removing markdown code blocks and any extra whitespace.
-
-    Args:
-        json_str (str): The JSON string to clean
-
-    Returns:
-        str: The cleaned JSON string
+    Clean a JSON string by extracting the first valid { } block and removing markdown.
     """
-    # Remove markdown code blocks
+    # 1. Remove markdown code blocks if present
     json_str = re.sub(r"```(?:json)?\n?(.*?)```", r"\1", json_str, flags=re.DOTALL)
-
-    # If no code blocks found, use the original string
-    if not json_str.strip():
-        json_str = json_str
-
-    # Remove any leading/trailing whitespace
-    json_str = json_str.strip()
-
-    return json_str
+    
+    # 2. Find the first occurrence of '{' and the last occurrence of '}'
+    start_index = json_str.find('{')
+    end_index = json_str.rfind('}')
+    
+    if start_index != -1 and end_index != -1:
+        json_str = json_str[start_index:end_index + 1]
+    
+    return json_str.strip()
 
 
 async def convert_to_model(input_text: str, target_model: Type[T]) -> str:
@@ -111,11 +105,28 @@ async def convert_to_model(input_text: str, target_model: Type[T]) -> str:
     {input_text}
     """
 
-    # Get structured response from the agent
+    # Get structured response from the agent with retries
+    max_retries = 3
+    retry_delay = 30
+    
+    for attempt in range(max_retries):
+        try:
+            response = await structured_output_agent.arun(prompt)
+            json_string = clean_json_string(response.content)
+            logger.info(f"Structured output agent response: {json_string}")
+            break
+        except Exception as e:
+            error_msg = str(e).lower()
+            if "429" in error_msg or "rate limit" in error_msg:
+                if attempt < max_retries - 1:
+                    wait_time = retry_delay * (2 ** attempt)
+                    logger.warning(f"Rate limit hit in structured output. Waiting {wait_time}s before retry...")
+                    await asyncio.sleep(wait_time)
+                    continue
+            logger.error(f"Failed to get structured output after {attempt+1} attempts: {str(e)}")
+            raise e
+    
     try:
-        response = await structured_output_agent.arun(prompt)
-        json_string = clean_json_string(response.content)
-        logger.info(f"Structured output agent response: {json_string}")
 
         # Parse the JSON string
         try:
@@ -123,8 +134,9 @@ async def convert_to_model(input_text: str, target_model: Type[T]) -> str:
             return json_string
 
         except json.JSONDecodeError as json_err:
-            logger.error(f"JSON parsing error: {str(json_err)}")
-            raise ValueError(f"Invalid JSON response: {str(json_err)}")
+            logger.error(f"JSON parsing error at {json_err.lineno}:{json_err.colno}: {str(json_err)}")
+            logger.error(f"Problematic JSON snippet: {json_string[:1000]}...") # Log first 1000 chars
+            raise ValueError(f"Invalid JSON response at line {json_err.lineno}, col {json_err.colno}: {str(json_err)}")
 
     except Exception as e:
         logger.error(f"Failed to parse response into {target_model.__name__}: {str(e)}")

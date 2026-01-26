@@ -11,6 +11,7 @@ from loguru import logger
 from agents.team import trip_planning_team
 import json
 import time
+import asyncio
 from agents.structured_output import convert_to_model
 from repository.trip_plan_repository import (
     create_trip_plan_status,
@@ -25,7 +26,6 @@ from agents.flight import flight_search_agent
 from agents.hotel import hotel_search_agent
 from agents.food import dining_agent
 from agents.budget import budget_agent
-
 
 def travel_request_to_markdown(data: TravelPlanRequest) -> str:
     # Map of travel vibes to their descriptions
@@ -128,6 +128,47 @@ def travel_request_to_markdown(data: TravelPlanRequest) -> str:
     return "\n".join(lines)
 
 
+async def safe_agent_run(agent, prompt, max_retries=5):
+    """Run an agent with exponential backoff for rate limits and robust error handling."""
+    retry_delay = 30  # Start with 30s as requested
+    
+    for attempt in range(max_retries):
+        try:
+            response = await agent.arun(prompt)
+            
+            # Robust check for None or empty results from Agno
+            if response is None:
+                raise ValueError("Agent returned None response")
+            if not response.messages or len(response.messages) == 0:
+                # Often happens when hitting a limit but not getting a clean exception
+                raise ValueError("Agent returned response with no messages (likely quota/connectivity)")
+            if response.messages[-1].content is None:
+                raise ValueError("Agent response content is None")
+                
+            return response
+            
+        except Exception as e:
+            error_msg = str(e).lower()
+            
+            # Broad check for retryable errors (429, 500, 503, Quota, etc.)
+            retryable_keywords = ["429", "rate limit", "quota", "exhausted", "no messages", "503", "500"]
+            is_retryable = any(kw in error_msg for kw in retryable_keywords)
+            
+            if is_retryable:
+                if attempt < max_retries - 1:
+                    # Longer wait for consecutive retries
+                    wait_time = retry_delay * (1.5 ** attempt) 
+                    logger.warning(f"Retryable error: '{error_msg}'. Waiting {wait_time:.1f}s before retry (Attempt {attempt + 1}/{max_retries})...")
+                    await asyncio.sleep(wait_time)
+                    continue
+            
+            # Check for 404/Model Not Found to suggest root-level fixes
+            if "404" in error_msg or "not found" in error_msg:
+                logger.error("MODEL NOT FOUND ERROR: Check if the model ID in llm.py is correct.")
+                
+            logger.error(f"Agent execution failed after {attempt + 1} attempts: {str(e)}")
+            raise e
+
 async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
     """Generate a travel plan based on the request and log status/output to database."""
     trip_plan_id = request.trip_plan_id
@@ -162,22 +203,6 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         last_response_content = ""
         time_start = time.time()
 
-        # Team Collaboration
-        # prompt = f"""
-        #     Below is my travel plan request. Please generate a travel plan for the request.
-        #     {travel_request_md}
-        # """
-
-        # time_start = time.time()
-        # ai_response = await trip_planning_team.arun(prompt)
-        # time_end = time.time()
-        # logger.info(f"AI team processing time: {time_end - time_start:.2f} seconds")
-
-        # last_response_content = ai_response.messages[-1].content
-        # logger.info(
-        #     f"Last AI Response for conversion: {last_response_content[:500]}..."
-        # )
-
         # Update status for AI team generation
         await update_trip_plan_status(
             trip_plan_id=trip_plan_id,
@@ -186,7 +211,8 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         )
 
         # Destination Research
-        destionation_research_response = await destination_agent.arun(
+        destionation_research_response = await safe_agent_run(
+            destination_agent,
             f"""
             Please research about the destination {request.travel_plan.destination}
 
@@ -210,6 +236,10 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         ---
 """
 
+        # Wait 12s before next call to stay under 5 RPM
+        logger.info("Waiting 12s for Rate Limit (RPM) protection...")
+        await asyncio.sleep(12)
+
         # Update status for AI team generation
         await update_trip_plan_status(
             trip_plan_id=trip_plan_id,
@@ -217,7 +247,8 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             current_step="Searching for the best flights",
         )
         # Flight Search
-        flight_search_response = await flight_search_agent.arun(
+        flight_search_response = await safe_agent_run(
+            flight_search_agent,
             f"""
             Please find flights according to the user's travel request:
             {travel_request_md}
@@ -241,6 +272,10 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         ---
         """
 
+        # Wait 12s before next call to stay under 5 RPM
+        logger.info("Waiting 12s for Rate Limit (RPM) protection...")
+        await asyncio.sleep(12)
+
         # Update status for AI team generation
         await update_trip_plan_status(
             trip_plan_id=trip_plan_id,
@@ -248,7 +283,8 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             current_step="Searching for the best hotels",
         )
         # Hotel Search
-        hotel_search_response = await hotel_search_agent.arun(
+        hotel_search_response = await safe_agent_run(
+            hotel_search_agent,
             f"""
             Please find hotels according to the user's travel request:
             {travel_request_md}
@@ -272,6 +308,10 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             f"Hotel search response: {hotel_search_response.messages[-1].content}"
         )
 
+        # Wait 12s before next call to stay under 5 RPM
+        logger.info("Waiting 12s for Rate Limit (RPM) protection...")
+        await asyncio.sleep(12)
+
         # Update status for AI team generation
         await update_trip_plan_status(
             trip_plan_id=trip_plan_id,
@@ -279,7 +319,8 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             current_step="Searching for the best restaurants",
         )
         # Restaurant Search
-        restaurant_search_response = await dining_agent.arun(
+        restaurant_search_response = await safe_agent_run(
+            dining_agent,
             f"""
             Please find restaurants according to the user's travel request:
             {travel_request_md}
@@ -303,6 +344,10 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             f"Restaurant search response: {restaurant_search_response.messages[-1].content}"
         )
 
+        # Wait 12s before next call to stay under 5 RPM
+        logger.info("Waiting 12s for Rate Limit (RPM) protection...")
+        await asyncio.sleep(12)
+
         # Update status for AI team generation
         await update_trip_plan_status(
             trip_plan_id=trip_plan_id,
@@ -310,7 +355,8 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             current_step="Creating the day-by-day itinerary",
         )
         # Itinerary
-        itinerary_response = await itinerary_agent.arun(
+        itinerary_response = await safe_agent_run(
+            itinerary_agent,
             f"""
             Please create a detailed day-by-day itinerary for a trip to {request.travel_plan.destination}  for user's travel request:
             {travel_request_md}
@@ -329,6 +375,10 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         ---
         """
 
+        # Wait 12s before next call to stay under 5 RPM
+        logger.info("Waiting 12s for Rate Limit (RPM) protection...")
+        await asyncio.sleep(12)
+
         # Update status for AI team generation
         await update_trip_plan_status(
             trip_plan_id=trip_plan_id,
@@ -336,7 +386,8 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             current_step="Optimizing the budget",
         )
         # Budget
-        budget_response = await budget_agent.arun(
+        budget_response = await safe_agent_run(
+            budget_agent,
             f"""
             Please optimize the budget according to the user's travel request:
             {travel_request_md}
@@ -348,8 +399,12 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
 
         logger.info(f"Budget response: {budget_response.messages[-1].content}")
 
+        # Wait 12s before final conversion (which also uses an agent)
+        logger.info("Waiting 12s for Rate Limit (RPM) protection before final formatting...")
+        await asyncio.sleep(12)
+
         time_end = time.time()
-        logger.info(f"Total time taken: {time_end - time_start:.2f} seconds")
+        logger.info(f"Total time taken (including delays): {time_end - time_start:.2f} seconds")
 
         # Update status for response conversion
         await update_trip_plan_status(
