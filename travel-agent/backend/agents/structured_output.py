@@ -106,7 +106,7 @@ async def convert_to_model(input_text: str, target_model: Type[T]) -> str:
     """
 
     # Get structured response from the agent with retries
-    max_retries = 3
+    max_retries = 5
     retry_delay = 30
     
     for attempt in range(max_retries):
@@ -117,12 +117,18 @@ async def convert_to_model(input_text: str, target_model: Type[T]) -> str:
             break
         except Exception as e:
             error_msg = str(e).lower()
-            if "429" in error_msg or "rate limit" in error_msg:
+            
+            # Broad check for retryable errors
+            retryable_keywords = ["429", "rate limit", "quota", "exhausted", "503", "500", "tool_use_failed"]
+            is_retryable = any(kw in error_msg for kw in retryable_keywords)
+            
+            if is_retryable:
                 if attempt < max_retries - 1:
-                    wait_time = retry_delay * (2 ** attempt)
-                    logger.warning(f"Rate limit hit in structured output. Waiting {wait_time}s before retry...")
+                    wait_time = retry_delay * (1.5 ** attempt)
+                    logger.warning(f"Retryable error in structured output: '{error_msg}'. Waiting {wait_time:.1f}s before retry (Attempt {attempt+1}/{max_retries})...")
                     await asyncio.sleep(wait_time)
                     continue
+            
             logger.error(f"Failed to get structured output after {attempt+1} attempts: {str(e)}")
             raise e
     

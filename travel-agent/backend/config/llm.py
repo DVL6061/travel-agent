@@ -1,6 +1,8 @@
 from agno.models.google import Gemini
 from agno.models.openai import OpenAIChat
 from agno.models.openrouter import OpenRouter
+from agno.models.groq import Groq
+# from agno.models.ollama import Ollama
 
 # ============================================
 # OPTION 1: OpenRouter Models (PAID/CREDITS REQUIRED)
@@ -42,19 +44,25 @@ from agno.models.openrouter import OpenRouter
 # OPTION 4: Groq Models (FREE & INSANELY FAST!) - CURRENTLY ACTIVE
 # ============================================
 # Using llama-3.1-8b-instant for maximum RPD quota (14,400)
-groq_model = Groq(id="llama-3.1-8b-instant")
-groq_model_fast = Groq(id="llama-3.1-8b-instant")
+#groq_model = Groq(id="llama-3.1-8b-instant")
+#groq_model_fast = Groq(id="llama-3.1-8b-instant")
 
 # ============================================
 # OPTION 5: Local Models (OLLAMA) 
 # ============================================
 # Download Ollama from: https://ollama.com/
 # Run 'ollama run llama3.2' first. No API key needed!
-local_model = Ollama(id="llama3.2")
+# local_model = Ollama(id="llama3.2")
 
-# ============================================
 # ACTIVE MODEL SELECTION
-# ============================================
-model = groq_model
-model2 = groq_model_fast
-model_zero = groq_model
+# Using llama-4-scout-17b-16e-instruct from the Free Tier
+# It offers the BEST balance for this project: 30,000 TPM (solves token limits) 
+# and 30 RPM (solves speed limits).
+model = Groq(id="meta-llama/llama-4-scout-17b-16e-instruct")
+model2 = Groq(id="meta-llama/llama-4-scout-17b-16e-instruct")
+model_zero = Groq(id="meta-llama/llama-4-scout-17b-16e-instruct")
+
+# --- PREVIOUS SELECTION (FOR REVERT) ---
+# model = Groq(id="llama-3.3-70b-versatile")
+# model2 = Groq(id="llama-3.1-8b-instant")
+# model_zero = Groq(id="llama-3.1-8b-instant")

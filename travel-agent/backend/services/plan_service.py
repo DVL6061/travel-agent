@@ -130,17 +130,35 @@ def travel_request_to_markdown(data: TravelPlanRequest) -> str:
 
 async def safe_agent_run(agent, prompt, max_retries=5):
     """Run an agent with exponential backoff for rate limits and robust error handling."""
-    retry_delay = 30  # Start with 30s as requested
+    # --- NEW CODE START (ERROR REFLECTION & TPM SLICING) ---
+    current_prompt = prompt
+    last_error_context = ""
+    retry_delay = 30
     
+    # Helper to clean and truncate strings to roughly 3500 tokens (4 chars per token)
+    def truncate_for_tpm(text, limit=14000): 
+        if len(text) > limit:
+            logger.warning(f"Truncating massive input ({len(text)} chars) to fit TPM limits.")
+            return text[:limit] + "\n[... Content truncated to stay under TPM limit ...]"
+        return text
+
     for attempt in range(max_retries):
         try:
-            response = await agent.arun(prompt)
+            # If we previously hit a TPM/Size error, we MUST truncate the prompt
+            if "tokens" in last_error_context.lower() or "too large" in last_error_context.lower():
+                # Forcefully slice the prompt or last tool output if possible
+                current_prompt = truncate_for_tpm(current_prompt)
+
+            # Append error context if this is a retry
+            if last_error_context:
+                reflection_prompt = f"{current_prompt}\n\nATTENTION: Your previous attempt failed with the following error. PLEASE FIX YOUR TOOL CALL FORMATTING OR BE MORE CONCISE:\n{last_error_context}"
+                response = await agent.arun(reflection_prompt)
+            else:
+                response = await agent.arun(current_prompt)
             
-            # Robust check for None or empty results from Agno
             if response is None:
                 raise ValueError("Agent returned None response")
             if not response.messages or len(response.messages) == 0:
-                # Often happens when hitting a limit but not getting a clean exception
                 raise ValueError("Agent returned response with no messages (likely quota/connectivity)")
             if response.messages[-1].content is None:
                 raise ValueError("Agent response content is None")
@@ -149,25 +167,145 @@ async def safe_agent_run(agent, prompt, max_retries=5):
             
         except Exception as e:
             error_msg = str(e).lower()
+            last_error_context = str(e) # Save exact error for reflection
+            
+            # Check for Groq's tool_use_failed error (Strict Retry with Reflection)
+            if "tool_use_failed" in error_msg or "failed to call a function" in error_msg or "validation failed" in error_msg:
+                logger.warning(f"Formatting error detected: {error_msg}. Retrying with reflection...")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2) # Short wait for formatting retries
+                    continue
+
+            # Check for TPM/Token limits (Specific fix for 6k limit)
+            if "tokens" in error_msg or "too large" in error_msg or "rate_limit_exceeded" in error_msg:
+                logger.warning(f"TPM Limit Hit (Requested {error_msg}). Attempting TRUNCATED retry...")
+                # We need to wait a full minute for TPM to reset if we really blasted it
+                await asyncio.sleep(60) 
+                continue
             
             # Broad check for retryable errors (429, 500, 503, Quota, etc.)
-            retryable_keywords = ["429", "rate limit", "quota", "exhausted", "no messages", "503", "500"]
+            retryable_keywords = ["429", "rate limit", "quota", "exhausted", "503", "500"]
             is_retryable = any(kw in error_msg for kw in retryable_keywords)
             
             if is_retryable:
                 if attempt < max_retries - 1:
-                    # Longer wait for consecutive retries
                     wait_time = retry_delay * (1.5 ** attempt) 
-                    logger.warning(f"Retryable error: '{error_msg}'. Waiting {wait_time:.1f}s before retry (Attempt {attempt + 1}/{max_retries})...")
+                    logger.warning(f"Retryable error: '{error_msg}'. Waiting {wait_time:.1f}s before retry...")
                     await asyncio.sleep(wait_time)
                     continue
             
-            # Check for 404/Model Not Found to suggest root-level fixes
             if "404" in error_msg or "not found" in error_msg:
                 logger.error("MODEL NOT FOUND ERROR: Check if the model ID in llm.py is correct.")
                 
             logger.error(f"Agent execution failed after {attempt + 1} attempts: {str(e)}")
             raise e
+    # --- NEW CODE END ---
+
+# --- OLD CODE (COMMENTED OUT FOR REVERTING) ---
+# async def safe_agent_run(agent, prompt, max_retries=5):
+#     """Run an agent with exponential backoff for rate limits and robust error handling."""
+#     # --- NEW CODE START (ERROR REFLECTION) ---
+#     current_prompt = prompt
+#     last_error_context = ""
+#     retry_delay = 30
+#     
+#     for attempt in range(max_retries):
+#         try:
+#             # Append error context if this is a retry
+#             if last_error_context:
+#                 reflection_prompt = f"{current_prompt}\n\nATTENTION: Your previous attempt failed with the following error. PLEASE FIX YOUR TOOL CALL FORMATTING:\n{last_error_context}"
+#                 response = await agent.arun(reflection_prompt)
+#             else:
+#                 response = await agent.arun(current_prompt)
+#             
+#             if response is None:
+#                 raise ValueError("Agent returned None response")
+#             if not response.messages or len(response.messages) == 0:
+#                 raise ValueError("Agent returned response with no messages (likely quota/connectivity)")
+#             if response.messages[-1].content is None:
+#                 raise ValueError("Agent response content is None")
+#                 
+#             return response
+#             
+#         except Exception as e:
+#             error_msg = str(e).lower()
+#             last_error_context = str(e) # Save exact error for reflection
+#             
+#             # Check for Groq's tool_use_failed error (Strict Retry with Reflection)
+#             if "tool_use_failed" in error_msg or "failed to call a function" in error_msg or "validation failed" in error_msg:
+#                 logger.warning(f"Formatting error detected: {error_msg}. Retrying with reflection...")
+#                 if attempt < max_retries - 1:
+#                     await asyncio.sleep(2) # Short wait for formatting retries
+#                     continue
+#             
+#             # Broad check for retryable errors (429, 500, 503, Quota, etc.)
+#             retryable_keywords = ["429", "rate limit", "quota", "exhausted", "503", "500"]
+#             is_retryable = any(kw in error_msg for kw in retryable_keywords)
+#             
+#             if is_retryable:
+#                 if attempt < max_retries - 1:
+#                     wait_time = retry_delay * (1.5 ** attempt) 
+#                     logger.warning(f"Retryable error: '{error_msg}'. Waiting {wait_time:.1f}s before retry...")
+#                     await asyncio.sleep(wait_time)
+#                     continue
+#             
+#             if "404" in error_msg or "not found" in error_msg:
+#                 logger.error("MODEL NOT FOUND ERROR: Check if the model ID in llm.py is correct.")
+#                 
+#             logger.error(f"Agent execution failed after {attempt + 1} attempts: {str(e)}")
+#             raise e
+#     # --- NEW CODE END ---
+
+# --- OLD CODE (COMMENTED OUT FOR REVERTING) ---
+# async def safe_agent_run(agent, prompt, max_retries=5):
+#     """Run an agent with exponential backoff for rate limits and robust error handling."""
+#     retry_delay = 30  # Start with 30s as requested
+#     
+#     for attempt in range(max_retries):
+#         try:
+#             response = await agent.arun(prompt)
+#             
+#             # Robust check for None or empty results from Agno
+#             if response is None:
+#                 raise ValueError("Agent returned None response")
+#             if not response.messages or len(response.messages) == 0:
+#                 # Often happens when hitting a limit but not getting a clean exception
+#                 raise ValueError("Agent returned response with no messages (likely quota/connectivity)")
+#             if response.messages[-1].content is None:
+#                 raise ValueError("Agent response content is None")
+#                 
+#             return response
+#             
+#         except Exception as e:
+#             error_msg = str(e).lower()
+#             
+#             # Check for Groq's tool_use_failed error
+#             if "tool_use_failed" in error_msg or "failed to call a function" in error_msg:
+#                 # If tool use fails, try one more time without tools (if the agent allows)
+#                 # or just retry normally as it might be a transient formatting issue
+#                 logger.warning(f"Tool use failed in Groq. Retrying Step...")
+#                 if attempt < max_retries - 1:
+#                     await asyncio.sleep(5) # Short wait before retry
+#                     continue
+#             
+#             # Broad check for retryable errors (429, 500, 503, Quota, etc.)
+#             retryable_keywords = ["429", "rate limit", "quota", "exhausted", "no messages", "503", "500"]
+#             is_retryable = any(kw in error_msg for kw in retryable_keywords)
+#             
+#             if is_retryable:
+#                 if attempt < max_retries - 1:
+#                     # Longer wait for consecutive retries
+#                     wait_time = retry_delay * (1.5 ** attempt) 
+#                     logger.warning(f"Retryable error: '{error_msg}'. Waiting {wait_time:.1f}s before retry (Attempt {attempt + 1}/{max_retries})...")
+#                     await asyncio.sleep(wait_time)
+#                     continue
+#             
+#             # Check for 404/Model Not Found to suggest root-level fixes
+#             if "404" in error_msg or "not found" in error_msg:
+#                 logger.error("MODEL NOT FOUND ERROR: Check if the model ID in llm.py is correct.")
+#                 
+#             logger.error(f"Agent execution failed after {attempt + 1} attempts: {str(e)}")
+#             raise e
 
 async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
     """Generate a travel plan based on the request and log status/output to database."""
