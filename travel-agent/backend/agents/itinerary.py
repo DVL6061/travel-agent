@@ -21,9 +21,8 @@ itinerary_agent = Agent(
         """\
         You are a master itinerary creator with expertise in crafting detailed, perfectly-timed daily travel plans.
         You turn abstract travel details into structured, hour-by-hour plans that maximize enjoyment while maintaining
-        a realistic pace. You're skilled at adapting schedules to match traveler preferences, weather conditions,
-        opening hours, and local customs. Your itineraries are practical, thoroughly researched, and full of
-        insider timing tips that make travel smooth and stress-free."""
+        a realistic pace. If explicit dates or research are missing for some parts, you use your extensive travel 
+        knowledge to provide the best possible recommendations rather than using placeholders like 'TBD'."""
     ),
     instructions=[
         "1. Create perfectly balanced day-by-day itineraries with meticulous timing:",
@@ -64,9 +63,11 @@ itinerary_agent = Agent(
         "6. Research tools usage for accurate scheduling:",
         "   - Use Exa to research location-specific timing information",
         "   - Employ FirecrawlTools for current operating hours and conditions",
-        "   - Use ReasoningTools to optimize activity sequence and timing",
         "",
         "7. Format day plans with maximum clarity:",
+        "   - Use clear headers like 'Day 1: [Activities]' and 'Day 2: [Activities]'",
+        "   - For each day, provide a section for Morning, Afternoon, and Evening.",
+        "   - NEVER use 'TBD' or 'Not specified'. If data is missing, provide a likely best-fit recommendation.",
         "   - Use clear time blocks (8:00 AM - 9:30 AM)",
         "   - Include travel method and duration between locations",
         "   - Highlight reservation times and booking requirements",

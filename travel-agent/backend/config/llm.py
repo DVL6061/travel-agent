@@ -7,11 +7,9 @@ from agno.models.groq import Groq
 # ============================================
 # OPTION 1: OpenRouter Models (PAID/CREDITS REQUIRED)
 # ============================================
-# model = OpenRouter(id="google/gemini-2.0-flash-001", temperature=0.3, max_tokens=8096)
-# model2 = OpenRouter(id="openai/gpt-4o", temperature=0.1, max_tokens=8096)
-# model_zero = OpenRouter(
-#     id="google/gemini-2.0-flash-001", temperature=0.1, max_tokens=8096
-# )
+model = OpenRouter(id="google/gemini-2.0-flash-001", temperature=0.3, max_tokens=8096)
+model2 = OpenRouter(id="openai/gpt-4o", temperature=0.1, max_tokens=8096)
+model_zero = OpenRouter(id="google/gemini-2.0-flash-001", temperature=0.1, max_tokens=8096)
 
 # free trail on openrouter model
 # --- New Configuration (Free Models) - CURRENTLY ACTIVE ---
@@ -40,12 +38,31 @@ from agno.models.groq import Groq
 # model2 = Gemini(id="gemini-2.0-flash-lite", temperature=0.1)
 # model_zero = Gemini(id="gemini-2.0-flash-lite", temperature=0.1)
 
+# ACTIVE MODEL SELECTION
+# Using Gemini 2.0 models (Note: 2.5 is not yet a standard ID)
+# model = Gemini(id="gemini-2.0-flash", temperature=0.3)
+# model2 = Gemini(id="gemini-2.0-flash-lite", temperature=0.1)
+# model_zero = Gemini(id="gemini-2.0-flash", temperature=0.1)
+
 # ============================================
 # OPTION 4: Groq Models (FREE & INSANELY FAST!) - CURRENTLY ACTIVE
 # ============================================
 # Using llama-3.1-8b-instant for maximum RPD quota (14,400)
-#groq_model = Groq(id="llama-3.1-8b-instant")
-#groq_model_fast = Groq(id="llama-3.1-8b-instant")
+# groq_model = Groq(id="llama-3.1-8b-instant")
+# groq_model_fast = Groq(id="llama-3.1-8b-instant")
+
+# --- PREVIOUS SELECTION (FOR REVERT) ---
+# Using llama-4-scout-17b-16e-instruct from the Free Tier
+# It offers the BEST balance for this project: 30,000 TPM (solves token limits) 
+# and 30 RPM (solves speed limits).
+# model = Groq(id="meta-llama/llama-4-scout-17b-16e-instruct")
+# model2 = Groq(id="meta-llama/llama-4-scout-17b-16e-instruct")
+# model_zero = Groq(id="meta-llama/llama-4-scout-17b-16e-instruct")
+# model = Groq(id="llama-3.3-70b-versatile")
+# model2 = Groq(id="llama-3.1-8b-instant")
+# model_zero = Groq(id="llama-3.1-8b-instant")
+
+
 
 # ============================================
 # OPTION 5: Local Models (OLLAMA) 
@@ -54,15 +71,3 @@ from agno.models.groq import Groq
 # Run 'ollama run llama3.2' first. No API key needed!
 # local_model = Ollama(id="llama3.2")
 
-# ACTIVE MODEL SELECTION
-# Using llama-4-scout-17b-16e-instruct from the Free Tier
-# It offers the BEST balance for this project: 30,000 TPM (solves token limits) 
-# and 30 RPM (solves speed limits).
-model = Groq(id="meta-llama/llama-4-scout-17b-16e-instruct")
-model2 = Groq(id="meta-llama/llama-4-scout-17b-16e-instruct")
-model_zero = Groq(id="meta-llama/llama-4-scout-17b-16e-instruct")
-
-# --- PREVIOUS SELECTION (FOR REVERT) ---
-# model = Groq(id="llama-3.3-70b-versatile")
-# model2 = Groq(id="llama-3.1-8b-instant")
-# model_zero = Groq(id="llama-3.1-8b-instant")

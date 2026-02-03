@@ -2,13 +2,13 @@ from pydantic import BaseModel, Field
 from typing import List
 
 class HotelResult(BaseModel):
-    hotel_name: str = Field(description="The name of the hotel")
-    price: str = Field(description="The price of the hotel")
-    rating: str = Field(description="The rating of the hotel")
-    address: str = Field(description="The address of the hotel")
-    amenities: List[str] = Field(description="The amenities of the hotel")
-    description: str = Field(description="The description of the hotel")
-    url: str = Field(description="The url of the hotel")
+    hotel_name: str = Field(default="", description="The name of the hotel")
+    price: str = Field(default="", description="The price of the hotel")
+    rating: str = Field(default="", description="The rating of the hotel")
+    address: str = Field(default="", description="The address of the hotel")
+    amenities: List[str] = Field(default_factory=list, description="The amenities of the hotel")
+    description: str = Field(default="", description="The description of the hotel")
+    url: str = Field(default="", description="The url of the hotel")
 
 class HotelResults(BaseModel):
     hotels: List[HotelResult] = Field(description="The list of hotels")

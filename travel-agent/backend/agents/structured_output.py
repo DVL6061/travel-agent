@@ -72,36 +72,28 @@ async def convert_to_model(input_text: str, target_model: Type[T]) -> str:
 
     # Create the prompt with model schema and clear instructions
     prompt = f"""
-    Your task is to convert the input text into a valid JSON object that exactly matches the provided schema.
-    Do not include any explanations or additional text - return only the JSON object.
+    Your task is to convert the input research text into a valid JSON object that exactly matches the provided schema.
+    
+    SEARCH FOR THESE SECTIONS IN THE INPUT:
+    1. '## Day-by-day itinerary:' -> Extract into 'day_by_day_plan'
+    2. '## Hotel recommendations:' -> Extract into 'hotels'
+    3. '## Destination Attractions:' -> Extract into 'attractions'
+    4. '## Flight recommendations:' -> Extract into 'flights'
+    5. '## Restaurant recommendations:' -> Extract into 'restaurants'
+    6. '## Budget Analysis:' -> Extract into 'budget_insights'
+    7. '## Practical Notes:' -> Extract into 'tips'
 
     Model schema:
     {schema_str}
 
     Rules:
-    - Output must be valid JSON
-    - All required fields must be included
-    - Field types must match schema exactly
-    - No extra fields allowed
-    - Validate all constraints (min/max values, regex patterns, etc)
+    - Return ONLY the JSON object. No markdown code blocks, no explanations.
+    - If a section is missing from the input, return an empty list [] for that field.
+    - For hotels, ensure 'hotel_name', 'price', 'rating', 'address', 'amenities', 'description', and 'url' are populated accurately.
+    - For itinerary days, ensure 'morning', 'afternoon', and 'evening' have descriptive content.
+    - URLs MUST start with http:// or https://. Never use "N/A".
 
-    Text Formatting Requirements:
-    - Use consistent, clean text formatting throughout all string fields
-    - For list items, use bullet points (•) instead of asterisks (*)
-    - Minimize indentation and whitespace in text fields
-    - Use line breaks sparingly and consistently
-    - Avoid formatting characters like asterisks (*) in text
-    - Don't include unnecessary prefixes or labels in text content
-    - Format times, dates, durations, and prices consistently
-    - Make sure all fields contain data appropriate for their purpose
-
-    URL Field Rules (CRITICAL):
-    - For any 'url' field, only use actual URLs starting with http:// or https://
-    - NEVER use "N/A", "n/a", "Not Available", or any placeholder text for URL fields
-    - If no valid URL is found in the input, use an empty string "" for the url field
-    - Extract URLs exactly as they appear in the source text
-
-    Input text to convert:
+    Input research text:
     {input_text}
     """
 
@@ -119,7 +111,13 @@ async def convert_to_model(input_text: str, target_model: Type[T]) -> str:
             error_msg = str(e).lower()
             
             # Broad check for retryable errors
-            retryable_keywords = ["429", "rate limit", "quota", "exhausted", "503", "500", "tool_use_failed"]
+            # --- PREVIOUS CODE (Gemini-specific with safety/block keywords) ---
+            # retryable_keywords = ["429", "rate limit", "quota", "exhausted", "503", "500", "tool_use_failed", "safety", "block"]
+            
+            # --- CURRENT CODE (OpenRouter-specific with credits/timeout keywords) ---
+            # Added "credits", "insufficient", "timeout" for OpenRouter billing errors.
+            # Kept general HTTP errors (429, 500, 503) and rate limit keywords.
+            retryable_keywords = ["429", "rate limit", "quota", "exhausted", "503", "500", "tool_use_failed", "credits", "insufficient", "timeout"]
             is_retryable = any(kw in error_msg for kw in retryable_keywords)
             
             if is_retryable:

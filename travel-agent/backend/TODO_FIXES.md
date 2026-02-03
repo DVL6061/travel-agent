@@ -19,3 +19,8 @@
   - Indication: `requested 20,497 tokens, limit 6,000`
   - Action: Lock in the model selection in `llm.py` and optimize search result trimming.
   - Status: Complete ✅ (Old code kept commented)
+
+- [x] **Task 5: Migration to Google Gemini**
+  - Goal: Use `gemini-2.0-flash` for high context and reliability.
+  - Action: Update `llm.py`, expand `safe_agent_run` truncation limits to 50k chars, and add safety filter error handling.
+  - Status: Complete ✅ (Groq config kept as backup)

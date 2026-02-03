@@ -135,11 +135,21 @@ async def safe_agent_run(agent, prompt, max_retries=5):
     last_error_context = ""
     retry_delay = 30
     
-    # Helper to clean and truncate strings to roughly 3500 tokens (4 chars per token)
-    def truncate_for_tpm(text, limit=14000): 
+    # Helper to clean and truncate strings. 
+    # --- PREVIOUS CODE (For Gemini - 200,000 char limit for 1.5M context window) ---
+    # def truncate_for_tpm(text, limit=200000): 
+    #     if len(text) > limit:
+    #         logger.warning(f"Truncating massive input ({len(text)} chars) for safety.")
+    #         return text[:limit] + "\n[... Content truncated for efficiency ...]"
+    #     return text
+    
+    # --- CURRENT CODE (For OpenRouter - 50,000 char limit to optimize credit usage) ---
+    # OpenRouter models like gpt-4o have large contexts but charge per token.
+    # Using a conservative 50k char (~12.5k token) limit for cost efficiency.
+    def truncate_for_tpm(text, limit=50000): 
         if len(text) > limit:
-            logger.warning(f"Truncating massive input ({len(text)} chars) to fit TPM limits.")
-            return text[:limit] + "\n[... Content truncated to stay under TPM limit ...]"
+            logger.warning(f"Truncating massive input ({len(text)} chars) for safety.")
+            return text[:limit] + "\n[... Content truncated for efficiency ...]"
         return text
 
     for attempt in range(max_retries):
@@ -183,8 +193,8 @@ async def safe_agent_run(agent, prompt, max_retries=5):
                 await asyncio.sleep(60) 
                 continue
             
-            # Broad check for retryable errors (429, 500, 503, Quota, etc.)
-            retryable_keywords = ["429", "rate limit", "quota", "exhausted", "503", "500"]
+            # Broad check for retryable errors (429, 500, 503, Quota, Safety, etc.)
+            retryable_keywords = ["429", "rate limit", "quota", "exhausted", "503", "500", "safety", "block", "finish_reason"]
             is_retryable = any(kw in error_msg for kw in retryable_keywords)
             
             if is_retryable:
