@@ -26,6 +26,9 @@ from agents.flight import flight_search_agent
 from agents.hotel import hotel_search_agent
 from agents.food import dining_agent
 from agents.budget import budget_agent
+# --- NEW CODE: Train Agent Import ---
+from agents.train import train_search_agent
+# --- END NEW CODE ---
 
 def travel_request_to_markdown(data: TravelPlanRequest) -> str:
     # Map of travel vibes to their descriptions
@@ -99,6 +102,9 @@ def travel_request_to_markdown(data: TravelPlanRequest) -> str:
         f"- **Budget per person:** {data.budget} {data.budget_currency} ({'Flexible' if data.budget_flexible else 'Fixed'})",
         f"- **Travel Style:** {travel_styles.get(data.travel_style, data.travel_style or 'Not specified')}",
         f"- **Preferred Pace:** {', '.join([pace_levels.get(p, str(p)) for p in data.pace]) or 'Not specified'}",
+        # --- NEW CODE: Transport Preference ---
+        f"- **Transport Preference:** {getattr(data, 'transport_preference', 'no_preference').replace('_', ' ').title()}",
+        # --- END NEW CODE ---
         "",
         "## ✨ Trip Preferences",
     ]
@@ -388,41 +394,119 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         logger.info("Waiting 12s for Rate Limit (RPM) protection...")
         await asyncio.sleep(12)
 
-        # Update status for AI team generation
-        await update_trip_plan_status(
-            trip_plan_id=trip_plan_id,
-            status="processing",
-            current_step="Searching for the best flights",
-        )
-        # Flight Search
-        flight_search_response = await safe_agent_run(
-            flight_search_agent,
-            f"""
-            Please find flights according to the user's travel request:
-            {travel_request_md}
+        # --- NEW CODE: Domestic Detection (moved here so both agents can use it) ---
+        starting_location = request.travel_plan.starting_location.lower()
+        destination = request.travel_plan.destination.lower()
+        
+        # Common Indian cities for domestic detection
+        india_indicators = ['india', 'delhi', 'mumbai', 'bangalore', 'bengaluru', 'chennai', 
+                           'kolkata', 'hyderabad', 'pune', 'ahmedabad', 'jaipur', 'goa', 
+                           'lucknow', 'kanpur', 'nagpur', 'indore', 'patna', 'bhopal',
+                           'varanasi', 'agra', 'kochi', 'coimbatore', 'madurai', 'vizag',
+                           'visakhapatnam', 'surat', 'rajkot', 'vadodara', 'chandigarh',
+                           'ludhiana', 'amritsar', 'udaipur', 'jodhpur', 'shimla', 'manali',
+                           'rishikesh', 'haridwar', 'darjeeling', 'gangtok', 'guwahati']
+        
+        is_domestic_india = any(city in starting_location for city in india_indicators) and \
+                           any(city in destination for city in india_indicators)
+        
+        # Get transport preference (default to 'no_preference')
+        transport_pref = getattr(request.travel_plan, 'transport_preference', 'no_preference')
+        
+        logger.info(f"🚦 Transport Preference: {transport_pref}, Domestic India: {is_domestic_india}")
+        
+        # Flight Agent: Skip if user prefers train AND trip is domestic
+        # (For international trips, always search flights as fallback)
+        should_search_flights = not (is_domestic_india and transport_pref == 'train')
+        
+        flight_search_response = None
+        if should_search_flights:
+            # Update status for AI team generation
+            await update_trip_plan_status(
+                trip_plan_id=trip_plan_id,
+                status="processing",
+                current_step="✈️ Searching for the best flights",
+            )
+            # Flight Search
+            flight_search_response = await safe_agent_run(
+                flight_search_agent,
+                f"""
+                Please find flights according to the user's travel request:
+                {travel_request_md}
 
-            If user has not specified the exact flight date, please consider it by yourself based on the user's travel request.
+                If user has not specified the exact flight date, please consider it by yourself based on the user's travel request.
 
-            Provide a very detailed research about the flights, its price, duration, and other relevant information that user might be interested in.
+                Provide a very detailed research about the flights, its price, duration, and other relevant information that user might be interested in.
 
-            Give top 5 flights.
+                Give top 5 flights.
+                """
+            )
+
+            logger.info(
+                f"Flight search response: {flight_search_response.messages[-1].content}"
+            )
+
+            last_response_content += f"""
+            ## Flight recommendations:
+            ---
+            {flight_search_response.messages[-1].content}
+            ---
             """
-        )
 
-        logger.info(
-            f"Flight search response: {flight_search_response.messages[-1].content}"
-        )
+            # Wait 12s before next call to stay under 5 RPM
+            logger.info("Waiting 12s for Rate Limit (RPM) protection...")
+            await asyncio.sleep(12)
+        else:
+            logger.info("✈️ Skipping flight search: User prefers trains for domestic trip")
+        # --- END NEW CODE ---
 
-        last_response_content += f"""
-        ## Flight recommendations:
-        ---
-        {flight_search_response.messages[-1].content}
-        ---
-        """
+        # --- Train Search (Domestic India Only) ---
+        train_search_response = None
+        
+        # Train Agent: Only run if domestic India AND (train preference OR no preference)
+        should_search_trains = is_domestic_india and transport_pref in ['train', 'no_preference']
+        
+        if should_search_trains:
+            # Update status for train search
+            await update_trip_plan_status(
+                trip_plan_id=trip_plan_id,
+                status="processing",
+                current_step="🚂 Searching for trains (Indian Railways)",
+            )
+            
+            train_search_response = await safe_agent_run(
+                train_search_agent,
+                f"""
+                Please find trains according to the user's travel request:
+                {travel_request_md}
 
-        # Wait 12s before next call to stay under 5 RPM
-        logger.info("Waiting 12s for Rate Limit (RPM) protection...")
-        await asyncio.sleep(12)
+                IMPORTANT:
+                - Search for trains between {request.travel_plan.starting_location} and {request.travel_plan.destination}
+                - Use Indian Railway station codes (like airport codes) for the search
+                - Provide detailed information including fares for all available classes (1AC, 2AC, 3AC, Sleeper, General)
+                - Include departure/arrival times, duration, train name, and running days
+                - Give top 5 trains with the best options for the travel dates.
+                """
+            )
+            
+            logger.info(f"🚂 Train search response: {train_search_response.messages[-1].content}")
+            
+            last_response_content += f"""
+            ## Train recommendations:
+            ---
+            {train_search_response.messages[-1].content}
+            ---
+            """
+            
+            # Wait 12s before next call to stay under 5 RPM
+            logger.info("Waiting 12s for Rate Limit (RPM) protection...")
+            await asyncio.sleep(12)
+        else:
+            if not is_domestic_india:
+                logger.info("🚂 Skipping train search: International trip detected")
+            elif transport_pref == 'flight':
+                logger.info("🚂 Skipping train search: User prefers flights only")
+        # --- END NEW CODE ---
 
         # Update status for AI team generation
         await update_trip_plan_status(
@@ -576,7 +660,10 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
                 "destination_agent_response": destionation_research_response.messages[
                     -1
                 ].content,
-                "flight_agent_response": flight_search_response.messages[-1].content,
+                "flight_agent_response": flight_search_response.messages[-1].content if flight_search_response else None,
+                # --- NEW CODE: Train Agent Response ---
+                "train_agent_response": train_search_response.messages[-1].content if train_search_response else None,
+                # --- END NEW CODE ---
                 "hotel_agent_response": hotel_search_response.messages[-1].content,
                 "restaurant_agent_response": restaurant_search_response.messages[
                     -1

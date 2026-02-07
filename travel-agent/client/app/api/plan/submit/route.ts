@@ -24,6 +24,7 @@ interface TripFormData {
   beenThereBefore?: string;
   lovedPlaces?: string;
   additionalInfo?: string;
+  transportPreference?: "flight" | "train" | "no_preference";
 }
 
 export async function POST(request: NextRequest) {
@@ -104,7 +105,8 @@ export async function POST(request: NextRequest) {
         pace: tripData.pace,
         been_there_before: tripData.beenThereBefore || "",
         loved_places: tripData.lovedPlaces || "",
-        additional_info: tripData.additionalInfo || ""
+        additional_info: tripData.additionalInfo || "",
+        transport_preference: tripData.transportPreference || "no_preference"
       }
     }
 

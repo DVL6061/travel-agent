@@ -7,6 +7,9 @@ from agents.food import dining_agent
 from agents.budget import budget_agent
 from agents.flight import flight_search_agent
 from agents.itinerary import itinerary_agent
+# --- NEW CODE: Train Agent Import ---
+from agents.train import train_search_agent
+# --- END NEW CODE ---
 from loguru import logger
 from agno.tools.reasoning import ReasoningTools
 
@@ -29,6 +32,9 @@ trip_planning_team = Team(
         dining_agent,
         budget_agent,
         flight_search_agent,
+        # --- NEW CODE: Train Agent Added ---
+        train_search_agent,
+        # --- END NEW CODE ---
         itinerary_agent,
     ],
     markdown=True,
@@ -56,15 +62,35 @@ trip_planning_team = Team(
         "",
         "2. Transportation Planning:",
         "   - Map out exact routes from start location to all destinations",
+        "",
+        "   --- NEW: DOMESTIC vs INTERNATIONAL DETECTION ---",
+        "   - If BOTH starting_location AND destination are cities within India:",
+        "     • This is a DOMESTIC trip",
+        "     • Call BOTH Flight Agent AND Train Agent",
+        "     • User will choose preferred transport based on results",
+        "   - If EITHER city is outside India (e.g., New York, Paris, London, Dubai):",
+        "     • This is an INTERNATIONAL trip",
+        "     • Call ONLY Flight Agent (skip Train Agent)",
+        "",
+        "   --- NEW: TRANSPORT PREFERENCE HANDLING ---",
+        "   - If user's transport_preference is 'flight':",
+        "     • Call ONLY Flight Agent, itinerary based on flight timings",
+        "   - If user's transport_preference is 'train':",
+        "     • Call ONLY Train Agent, itinerary based on train timings",
+        "   - If user's transport_preference is 'no_preference' or not specified:",
+        "     • Call BOTH agents, show both options in itinerary",
+        "     • Format each day with 'If Flying' and 'If Taking Train' sections",
+        "",
         "   - Research optimal flight/train combinations considering:",
         "     • Departure/arrival times aligned with check-in/out times",
-        "     • Layover durations and airport transfer times",
+        "     • Layover durations and airport/station transfer times",
         "     • Airline alliance benefits and baggage policies",
-        "     • Alternative airports and routes for cost optimization",
+        "     • Alternative airports/stations and routes for cost optimization",
         "   - Plan local transportation between all points of interest",
         "",
         "3. Coordinate with Specialized Agents:",
         "   - Flight Agent: Detailed air travel options with timing and pricing",
+        "   - Train Agent: Indian Railways options with classes, fares, and schedules (DOMESTIC ONLY)",
         "   - Hotel Agent: Accommodation matches for each night with amenity details",
         "   - Dining Agent: Restaurant recommendations with cuisine, price, and ambiance",
         "   - Activity Agent: Curated experiences matching interests and pace",

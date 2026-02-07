@@ -1,6 +1,9 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Literal, Optional
 from models.hotel import HotelResult
+# --- NEW CODE: Train Model Import ---
+from models.train import TrainResult
+# --- END NEW CODE ---
 
 
 class TravelDates(BaseModel):
@@ -31,6 +34,12 @@ class TravelPlanRequest(BaseModel):
     been_there_before: str = ""
     loved_places: str = ""
     additional_info: str = ""
+    # --- NEW CODE: Transport Preference Field ---
+    transport_preference: Literal["flight", "train", "no_preference"] = Field(
+        default="no_preference",
+        description="User's preferred transportation: 'flight', 'train', or 'no_preference'"
+    )
+    # --- END NEW CODE ---
 
 
 class TravelPlanAgentRequest(BaseModel):
@@ -108,6 +117,11 @@ class TravelPlanTeamResponse(BaseModel):
     flights: List[FlightResult] = Field(
         default_factory=list, description="A list of flights for the trip"
     )
+    # --- NEW CODE: Trains Field ---
+    trains: List[TrainResult] = Field(
+        default_factory=list, description="A list of trains for domestic trips in India"
+    )
+    # --- END NEW CODE ---
     restaurants: List[RestaurantResult] = Field(
         default_factory=list,
         description="A list of recommended restaurants for the trip"

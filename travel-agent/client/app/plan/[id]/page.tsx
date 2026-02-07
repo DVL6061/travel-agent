@@ -28,6 +28,9 @@ import {
   Heart,
   Home,
   Loader2,
+  // --- NEW CODE: Train icon for Trains tab ---
+  Train,
+  // --- END NEW CODE ---
   Lightbulb,
   Utensils,
   Receipt,
@@ -82,11 +85,39 @@ interface Restaurant {
   url?: string;
 }
 
+// --- NEW CODE: Train Interface ---
+interface Train {
+  train_number: string;
+  train_name: string;
+  departure_station: string;
+  arrival_station: string;
+  departure_time: string;
+  arrival_time: string;
+  duration: string;
+  distance?: string;
+  running_days?: string;
+  classes_available?: string[];
+  fare_1ac?: string;
+  fare_2ac?: string;
+  fare_3ac?: string;
+  fare_sleeper?: string;
+  fare_general?: string;
+  train_type?: string;
+  pantry_available?: string;
+  stops?: number;
+  avg_speed?: string;
+  booking_url?: string;
+}
+// --- END NEW CODE ---
+
 interface Itinerary {
   day_by_day_plan: DayPlan[];
   hotels: Hotel[];
   attractions: Attraction[];
   flights: Flight[];
+  // --- NEW CODE: Trains Array ---
+  trains?: Train[];
+  // --- END NEW CODE ---
   restaurants?: Restaurant[];
   tips?: string[];
   budget_insights?: string[];
@@ -101,6 +132,9 @@ interface TripDetails {
   budget_agent_response?: string;
   destination_agent_response?: string;
   flight_agent_response?: string;
+  // --- NEW CODE: Train Agent Response ---
+  train_agent_response?: string;
+  // --- END NEW CODE ---
   restaurant_agent_response?: string;
   itinerary_agent_response?: string;
   current_step?: string;
@@ -205,10 +239,10 @@ function StatusBadge({ status }: { status: TripDetails["status"] }) {
         status === "completed"
           ? "bg-green-500 hover:bg-green-600 text-white"
           : status === "pending"
-          ? "bg-yellow-500 hover:bg-yellow-600 text-black"
-          : status === "in-progress"
-          ? "bg-blue-500 hover:bg-blue-600 text-white"
-          : ""
+            ? "bg-yellow-500 hover:bg-yellow-600 text-black"
+            : status === "in-progress"
+              ? "bg-blue-500 hover:bg-blue-600 text-white"
+              : ""
       }
     >
       {text}
@@ -353,8 +387,7 @@ export default function TripDetailsPage() {
     } catch (err) {
       console.error("Error fetching trip details:", err);
       setError(
-        `Failed to fetch trip details: ${
-          err instanceof Error ? err.message : "Unknown error"
+        `Failed to fetch trip details: ${err instanceof Error ? err.message : "Unknown error"
         }`
       );
     } finally {
@@ -386,8 +419,7 @@ export default function TripDetailsPage() {
     } catch (err) {
       console.error("Error retrying trip plan:", err);
       setError(
-        `Failed to retry trip plan: ${
-          err instanceof Error ? err.message : "Unknown error"
+        `Failed to retry trip plan: ${err instanceof Error ? err.message : "Unknown error"
         }`
       );
     } finally {
@@ -569,9 +601,8 @@ export default function TripDetailsPage() {
                   <span className="text-muted-foreground">
                     {trip.adults} adult{trip.adults !== 1 ? "s" : ""}
                     {trip.children && trip.children > 0
-                      ? `, ${trip.children} child${
-                          trip.children !== 1 ? "ren" : ""
-                        }`
+                      ? `, ${trip.children} child${trip.children !== 1 ? "ren" : ""
+                      }`
                       : ""}
                   </span>
                 </div>
@@ -696,129 +727,129 @@ export default function TripDetailsPage() {
           trip.beenThereBefore ||
           trip.lovedPlaces ||
           trip.additionalInfo) && (
-          <div className="mt-6">
-            <h3 className="text-xl font-semibold mb-3">
-              Additional Information
-            </h3>
-            <Card>
-              <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {trip.interests && (
-                  <div>
-                    <h4 className="font-medium mb-1">Specific Interests:</h4>
-                    <p className="text-muted-foreground text-sm">
-                      {trip.interests}
-                    </p>
-                  </div>
-                )}
-                {trip.beenThereBefore && (
-                  <div>
-                    <h4 className="font-medium mb-1">Previous Visits:</h4>
-                    <p className="text-muted-foreground text-sm">
-                      {trip.beenThereBefore}
-                    </p>
-                  </div>
-                )}
-                {trip.lovedPlaces && (
-                  <div>
-                    <h4 className="font-medium mb-1">Loved Places:</h4>
-                    <p className="text-muted-foreground text-sm">
-                      {trip.lovedPlaces}
-                    </p>
-                  </div>
-                )}
-                {trip.additionalInfo && (
-                  <div className="md:col-span-2">
-                    <h4 className="font-medium mb-1">
-                      Additional Information:
-                    </h4>
-                    <p className="text-muted-foreground text-sm">
-                      {trip.additionalInfo}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
+            <div className="mt-6">
+              <h3 className="text-xl font-semibold mb-3">
+                Additional Information
+              </h3>
+              <Card>
+                <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {trip.interests && (
+                    <div>
+                      <h4 className="font-medium mb-1">Specific Interests:</h4>
+                      <p className="text-muted-foreground text-sm">
+                        {trip.interests}
+                      </p>
+                    </div>
+                  )}
+                  {trip.beenThereBefore && (
+                    <div>
+                      <h4 className="font-medium mb-1">Previous Visits:</h4>
+                      <p className="text-muted-foreground text-sm">
+                        {trip.beenThereBefore}
+                      </p>
+                    </div>
+                  )}
+                  {trip.lovedPlaces && (
+                    <div>
+                      <h4 className="font-medium mb-1">Loved Places:</h4>
+                      <p className="text-muted-foreground text-sm">
+                        {trip.lovedPlaces}
+                      </p>
+                    </div>
+                  )}
+                  {trip.additionalInfo && (
+                    <div className="md:col-span-2">
+                      <h4 className="font-medium mb-1">
+                        Additional Information:
+                      </h4>
+                      <p className="text-muted-foreground text-sm">
+                        {trip.additionalInfo}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
       </section>
 
       {/* Show loading message or itinerary based on status */}
       {(trip.status === "pending" ||
         trip.status === "in-progress" ||
         trip.status === "failed") && (
-        <div className="text-center py-10 border rounded-lg">
-          <Info size={48} className="text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">
-            {trip.status === "pending" && "Trip Plan in Progress"}
-            {trip.status === "in-progress" && "Trip Plan is Being Generated"}
-            {trip.status === "failed" && "Failed to Generate Trip Plan"}
-          </h2>
-          <p className="text-muted-foreground">
-            {trip.status === "pending" &&
-              "Your trip itinerary is currently being planned. Please wait as we create your personalized travel plan."}
-            {trip.status === "in-progress" &&
-              "We are working on your trip details. This might take a few moments. The page will automatically update when your plan is ready."}
-            {trip.status === "failed" &&
-              "Something went wrong while generating your trip plan. Please try again or contact support."}
-          </p>
+          <div className="text-center py-10 border rounded-lg">
+            <Info size={48} className="text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">
+              {trip.status === "pending" && "Trip Plan in Progress"}
+              {trip.status === "in-progress" && "Trip Plan is Being Generated"}
+              {trip.status === "failed" && "Failed to Generate Trip Plan"}
+            </h2>
+            <p className="text-muted-foreground">
+              {trip.status === "pending" &&
+                "Your trip itinerary is currently being planned. Please wait as we create your personalized travel plan."}
+              {trip.status === "in-progress" &&
+                "We are working on your trip details. This might take a few moments. The page will automatically update when your plan is ready."}
+              {trip.status === "failed" &&
+                "Something went wrong while generating your trip plan. Please try again or contact support."}
+            </p>
 
-          {/* Show current step when available */}
-          {(trip.status === "pending" || trip.status === "in-progress") &&
-            trip.current_step && (
-              <div className="mt-4 bg-muted/30 p-4 rounded-lg max-w-md mx-auto">
-                <h3 className="font-medium text-sm mb-1">Current Progress:</h3>
-                <p className="text-primary font-medium">{trip.current_step}</p>
+            {/* Show current step when available */}
+            {(trip.status === "pending" || trip.status === "in-progress") &&
+              trip.current_step && (
+                <div className="mt-4 bg-muted/30 p-4 rounded-lg max-w-md mx-auto">
+                  <h3 className="font-medium text-sm mb-1">Current Progress:</h3>
+                  <p className="text-primary font-medium">{trip.current_step}</p>
+                </div>
+              )}
+
+            {(trip.status === "pending" || trip.status === "in-progress") && (
+              <div className="flex justify-center mt-4">
+                <div className="flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Updating automatically...
+                </div>
               </div>
             )}
 
-          {(trip.status === "pending" || trip.status === "in-progress") && (
-            <div className="flex justify-center mt-4">
-              <div className="flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Updating automatically...
+            {/* Add retry button for failed plans */}
+            {trip.status === "failed" && (
+              <div className="flex justify-center mt-6">
+                <button
+                  onClick={retryTripPlan}
+                  disabled={retryLoading}
+                  className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-md hover:bg-primary/90 transition-colors"
+                >
+                  {retryLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Retrying...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 2v6h-6"></path>
+                        <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                        <path d="M3 22v-6h6"></path>
+                        <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+                      </svg>
+                      Retry Plan Generation
+                    </>
+                  )}
+                </button>
               </div>
-            </div>
-          )}
-
-          {/* Add retry button for failed plans */}
-          {trip.status === "failed" && (
-            <div className="flex justify-center mt-6">
-              <button
-                onClick={retryTripPlan}
-                disabled={retryLoading}
-                className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-md hover:bg-primary/90 transition-colors"
-              >
-                {retryLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Retrying...
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M21 2v6h-6"></path>
-                      <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
-                      <path d="M3 22v-6h6"></path>
-                      <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
-                    </svg>
-                    Retry Plan Generation
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
 
       {/* Show tabbed content when completed */}
       {trip.status === "completed" && (
@@ -836,6 +867,13 @@ export default function TripDetailsPage() {
             <TabsTrigger value="flights" className="flex items-center">
               <Plane className="h-4 w-4 mr-2" /> Flights
             </TabsTrigger>
+            {/* --- NEW CODE: Trains Tab (dynamic - only shows if trains exist) --- */}
+            {trip.itinerary?.trains && trip.itinerary.trains.length > 0 && (
+              <TabsTrigger value="trains" className="flex items-center">
+                <Train className="h-4 w-4 mr-2" /> Trains
+              </TabsTrigger>
+            )}
+            {/* --- END NEW CODE --- */}
             <TabsTrigger value="dining" className="flex items-center">
               <Utensils className="h-4 w-4 mr-2" /> Dining
             </TabsTrigger>
@@ -1030,8 +1068,8 @@ export default function TripDetailsPage() {
           {/* Hotels Tab Content */}
           <TabsContent value="hotels" className="space-y-8">
             {trip.itinerary &&
-            trip.itinerary.hotels &&
-            trip.itinerary.hotels.length > 0 ? (
+              trip.itinerary.hotels &&
+              trip.itinerary.hotels.length > 0 ? (
               <section>
                 <h2 className="text-2xl font-semibold mb-6 flex items-center">
                   <Home className="mr-3 h-6 w-6 text-primary" /> Recommended
@@ -1152,9 +1190,9 @@ export default function TripDetailsPage() {
           {/* Flights Tab Content */}
           <TabsContent value="flights" className="space-y-8">
             {trip.flight_agent_response ||
-            (trip.itinerary &&
-              trip.itinerary.flights &&
-              trip.itinerary.flights.length > 0) ? (
+              (trip.itinerary &&
+                trip.itinerary.flights &&
+                trip.itinerary.flights.length > 0) ? (
               <div className="space-y-8">
                 {/* Flights from itinerary */}
                 {trip.itinerary &&
@@ -1275,12 +1313,170 @@ export default function TripDetailsPage() {
             )}
           </TabsContent>
 
+          {/* --- NEW CODE: Trains Tab Content --- */}
+          <TabsContent value="trains" className="space-y-8">
+            {trip.train_agent_response ||
+              (trip.itinerary?.trains && trip.itinerary.trains.length > 0) ? (
+              <div className="space-y-8">
+                <section>
+                  <h2 className="text-2xl font-bold flex items-center mb-6 text-foreground">
+                    <Train className="h-6 w-6 mr-2 text-primary" />
+                    Train Options (Indian Railways)
+                  </h2>
+                  {/* Show structured train cards if available */}
+                  {trip.itinerary?.trains && trip.itinerary.trains.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {trip.itinerary.trains.map((train, index) => (
+                        <Card key={index} className="hover:shadow-lg transition-shadow bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-950/20 dark:to-yellow-950/20">
+                          <CardHeader className="space-y-1">
+                            <CardTitle className="text-lg flex items-center">
+                              <Train className="h-5 w-5 mr-2 text-primary" />
+                              {train.train_name || `Train ${train.train_number}`}
+                            </CardTitle>
+                            <CardDescription>
+                              🚂 {train.train_number} {train.train_type && `• ${train.train_type}`}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="py-4 space-y-4">
+                            {/* Route */}
+                            <div className="bg-muted/30 p-3 rounded-lg">
+                              <p className="font-medium flex items-center">
+                                <MapPin className="h-4 w-4 mr-2 text-primary" />
+                                Route:
+                              </p>
+                              <p className="text-muted-foreground mt-1">
+                                {train.departure_station} → {train.arrival_station}
+                              </p>
+                            </div>
+
+                            {/* Timings */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg">
+                                <p className="font-medium flex items-center text-green-700 dark:text-green-300">
+                                  <Clock className="h-4 w-4 mr-2" />
+                                  Departure:
+                                </p>
+                                <p className="text-green-600 dark:text-green-400 mt-1">
+                                  {train.departure_time || "Not specified"}
+                                </p>
+                              </div>
+                              <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg">
+                                <p className="font-medium flex items-center text-red-700 dark:text-red-300">
+                                  <Clock className="h-4 w-4 mr-2" />
+                                  Arrival:
+                                </p>
+                                <p className="text-red-600 dark:text-red-400 mt-1">
+                                  {train.arrival_time || "Not specified"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Duration & Distance */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-muted/20 p-3 rounded-lg">
+                                <p className="font-medium">⏱️ Duration:</p>
+                                <p className="text-muted-foreground mt-1">{train.duration || "N/A"}</p>
+                              </div>
+                              {train.distance && (
+                                <div className="bg-muted/20 p-3 rounded-lg">
+                                  <p className="font-medium">📍 Distance:</p>
+                                  <p className="text-muted-foreground mt-1">{train.distance}</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Fares by Class */}
+                            <div className="border-t pt-4">
+                              <p className="font-semibold mb-3 flex items-center">
+                                <DollarSign className="h-4 w-4 mr-2 text-primary" />
+                                💺 Available Classes & Fares:
+                              </p>
+                              <div className="grid grid-cols-5 gap-2 text-center text-xs">
+                                {train.fare_1ac && (
+                                  <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg">
+                                    <p className="font-bold text-purple-700 dark:text-purple-300">1AC</p>
+                                    <p className="text-purple-600 dark:text-purple-400">{train.fare_1ac}</p>
+                                  </div>
+                                )}
+                                {train.fare_2ac && (
+                                  <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
+                                    <p className="font-bold text-blue-700 dark:text-blue-300">2AC</p>
+                                    <p className="text-blue-600 dark:text-blue-400">{train.fare_2ac}</p>
+                                  </div>
+                                )}
+                                {train.fare_3ac && (
+                                  <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg">
+                                    <p className="font-bold text-green-700 dark:text-green-300">3AC</p>
+                                    <p className="text-green-600 dark:text-green-400">{train.fare_3ac}</p>
+                                  </div>
+                                )}
+                                {train.fare_sleeper && (
+                                  <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-lg">
+                                    <p className="font-bold text-yellow-700 dark:text-yellow-300">SL</p>
+                                    <p className="text-yellow-600 dark:text-yellow-400">{train.fare_sleeper}</p>
+                                  </div>
+                                )}
+                                {train.fare_general && (
+                                  <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg">
+                                    <p className="font-bold text-gray-700 dark:text-gray-300">GEN</p>
+                                    <p className="text-gray-600 dark:text-gray-400">{train.fare_general}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Running Days & Pantry */}
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              {train.running_days && (
+                                <div className="bg-muted/20 p-2 rounded-lg">
+                                  <p className="font-medium">📅 Runs:</p>
+                                  <p className="text-muted-foreground">{train.running_days}</p>
+                                </div>
+                              )}
+                              {train.pantry_available && (
+                                <div className="bg-muted/20 p-2 rounded-lg">
+                                  <p className="font-medium">🍽️ Pantry:</p>
+                                  <p className="text-muted-foreground">{train.pantry_available}</p>
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                          <CardFooter className="bg-orange-100 dark:bg-orange-900/30 border-t">
+                            <a
+                              href={train.booking_url || "https://www.irctc.co.in/"}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline text-sm flex items-center"
+                            >
+                              🔗 Book on IRCTC <Globe className="h-4 w-4 ml-1.5" />
+                            </a>
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </div>
+            ) : (
+              <div className="text-center py-10 border rounded-lg">
+                <Info size={48} className="text-muted-foreground mx-auto mb-4" />
+                <h2 className="text-xl font-semibold mb-2">
+                  Train Information Not Available
+                </h2>
+                <p className="text-muted-foreground">
+                  Train options are only available for domestic India trips.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+          {/* --- END NEW CODE --- */}
+
           {/* Dining Tab Content */}
           <TabsContent value="dining" className="space-y-8">
             {trip.restaurant_agent_response ||
-            (trip.itinerary &&
-              trip.itinerary.restaurants &&
-              trip.itinerary.restaurants.length > 0) ? (
+              (trip.itinerary &&
+                trip.itinerary.restaurants &&
+                trip.itinerary.restaurants.length > 0) ? (
               <div className="space-y-8">
                 {/* Restaurant suggestions from agent */}
                 {trip.restaurant_agent_response && (

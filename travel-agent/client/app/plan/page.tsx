@@ -62,6 +62,9 @@ import {
   AlertCircle,
   Plus,
   Minus,
+  // --- NEW CODE: Train icon for transport preference ---
+  Train,
+  // --- END NEW CODE ---
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -211,6 +214,9 @@ interface TripFormData {
   beenThereBefore?: string;
   lovedPlaces?: string;
   additionalInfo?: string;
+  // --- NEW CODE: Transport Preference ---
+  transportPreference: "flight" | "train" | "no_preference";
+  // --- END NEW CODE ---
 }
 
 export default function Plan() {
@@ -251,6 +257,9 @@ export default function Plan() {
         start: "",
         end: "",
       },
+      // --- NEW CODE: Transport Preference Default ---
+      transportPreference: "no_preference",
+      // --- END NEW CODE ---
     },
   });
 
@@ -506,20 +515,18 @@ export default function Plan() {
               return (
                 <div key={step.id} className="flex flex-col items-center">
                   <div
-                    className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-                      index <= currentStep
-                        ? "bg-primary border-primary text-primary-foreground"
-                        : "bg-background border-border text-muted-foreground"
-                    }`}
+                    className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${index <= currentStep
+                      ? "bg-primary border-primary text-primary-foreground"
+                      : "bg-background border-border text-muted-foreground"
+                      }`}
                   >
                     <StepIcon className="w-5 h-5" />
                   </div>
                   <span
-                    className={`text-xs mt-2 font-medium ${
-                      index <= currentStep
-                        ? "text-primary"
-                        : "text-muted-foreground"
-                    }`}
+                    className={`text-xs mt-2 font-medium ${index <= currentStep
+                      ? "text-primary"
+                      : "text-muted-foreground"
+                      }`}
                   >
                     {step.title}
                   </span>
@@ -655,11 +662,10 @@ export default function Plan() {
                         <div className="inline-flex items-center bg-muted rounded-lg p-1 w-fit">
                           <button
                             type="button"
-                            className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap ${
-                              dateInputType === "picker"
-                                ? "bg-background text-primary shadow-sm border border-border"
-                                : "text-muted-foreground hover:text-foreground"
-                            }`}
+                            className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap ${dateInputType === "picker"
+                              ? "bg-background text-primary shadow-sm border border-border"
+                              : "text-muted-foreground hover:text-foreground"
+                              }`}
                             onClick={() => {
                               setDateInputType("picker");
                               form.setValue("dateInputType", "picker");
@@ -674,11 +680,10 @@ export default function Plan() {
                           </button>
                           <button
                             type="button"
-                            className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap ${
-                              dateInputType === "text"
-                                ? "bg-background text-primary shadow-sm border border-border"
-                                : "text-muted-foreground hover:text-foreground"
-                            }`}
+                            className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap ${dateInputType === "text"
+                              ? "bg-background text-primary shadow-sm border border-border"
+                              : "text-muted-foreground hover:text-foreground"
+                              }`}
                             onClick={() => {
                               setDateInputType("text");
                               form.setValue("dateInputType", "text");
@@ -712,7 +717,7 @@ export default function Plan() {
                                         className={cn(
                                           "w-full justify-start text-left font-normal h-12",
                                           !field.value &&
-                                            "text-muted-foreground"
+                                          "text-muted-foreground"
                                         )}
                                       >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -766,7 +771,7 @@ export default function Plan() {
                                         className={cn(
                                           "w-full justify-start text-left font-normal h-12",
                                           !field.value &&
-                                            "text-muted-foreground"
+                                          "text-muted-foreground"
                                         )}
                                       >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -886,6 +891,61 @@ export default function Plan() {
                         </FormItem>
                       )}
                     />
+
+                    {/* --- NEW CODE: Transport Preference Field --- */}
+                    <FormField
+                      control={form.control}
+                      name="transportPreference"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base font-semibold flex items-center gap-2">
+                            <Train className="w-4 h-4 text-primary" />
+                            Preferred Transportation (for domestic India)
+                          </FormLabel>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2"
+                          >
+                            <div className="flex items-start space-x-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                              <RadioGroupItem value="flight" id="flight" className="mt-1" />
+                              <div>
+                                <Label htmlFor="flight" className="flex items-center gap-2 cursor-pointer font-medium">
+                                  <Plane className="w-4 h-4" />
+                                  Flight
+                                </Label>
+                                <p className="text-xs text-muted-foreground mt-1">Best for speed</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                              <RadioGroupItem value="train" id="train" className="mt-1" />
+                              <div>
+                                <Label htmlFor="train" className="flex items-center gap-2 cursor-pointer font-medium">
+                                  <Train className="w-4 h-4" />
+                                  Train
+                                </Label>
+                                <p className="text-xs text-muted-foreground mt-1">India trips only</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                              <RadioGroupItem value="no_preference" id="no_preference" className="mt-1" />
+                              <div>
+                                <Label htmlFor="no_preference" className="cursor-pointer font-medium">
+                                  No Preference
+                                </Label>
+                                <p className="text-xs text-muted-foreground mt-1">Show all options</p>
+                              </div>
+                            </div>
+                          </RadioGroup>
+                          <FormDescription className="text-sm text-muted-foreground">
+                            <Lightbulb className="w-3 h-3 inline mr-1" />
+                            For domestic India trips, choose train or flight. &quot;No Preference&quot; shows both options.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    {/* --- END NEW CODE --- */}
                   </div>
                 )}
 
@@ -1044,40 +1104,40 @@ export default function Plan() {
                                       form.watch("budgetCurrency") === "USD"
                                         ? 100
                                         : form.watch("budgetCurrency") === "EUR"
-                                        ? 100
-                                        : form.watch("budgetCurrency") === "GBP"
-                                        ? 100
-                                        : form.watch("budgetCurrency") === "INR"
-                                        ? 5000
-                                        : form.watch("budgetCurrency") === "JPY"
-                                        ? 10000
-                                        : 100
+                                          ? 100
+                                          : form.watch("budgetCurrency") === "GBP"
+                                            ? 100
+                                            : form.watch("budgetCurrency") === "INR"
+                                              ? 5000
+                                              : form.watch("budgetCurrency") === "JPY"
+                                                ? 10000
+                                                : 100
                                     }
                                     max={
                                       form.watch("budgetCurrency") === "USD"
                                         ? 10000
                                         : form.watch("budgetCurrency") === "EUR"
-                                        ? 9000
-                                        : form.watch("budgetCurrency") === "GBP"
-                                        ? 8000
-                                        : form.watch("budgetCurrency") === "INR"
-                                        ? 500000
-                                        : form.watch("budgetCurrency") === "JPY"
-                                        ? 1000000
-                                        : 10000
+                                          ? 9000
+                                          : form.watch("budgetCurrency") === "GBP"
+                                            ? 8000
+                                            : form.watch("budgetCurrency") === "INR"
+                                              ? 500000
+                                              : form.watch("budgetCurrency") === "JPY"
+                                                ? 1000000
+                                                : 10000
                                     }
                                     step={
                                       form.watch("budgetCurrency") === "USD"
                                         ? 100
                                         : form.watch("budgetCurrency") === "EUR"
-                                        ? 100
-                                        : form.watch("budgetCurrency") === "GBP"
-                                        ? 100
-                                        : form.watch("budgetCurrency") === "INR"
-                                        ? 5000
-                                        : form.watch("budgetCurrency") === "JPY"
-                                        ? 10000
-                                        : 100
+                                          ? 100
+                                          : form.watch("budgetCurrency") === "GBP"
+                                            ? 100
+                                            : form.watch("budgetCurrency") === "INR"
+                                              ? 5000
+                                              : form.watch("budgetCurrency") === "JPY"
+                                                ? 10000
+                                                : 100
                                     }
                                     value={[field.value]}
                                     onValueChange={(values) =>
@@ -1255,26 +1315,23 @@ export default function Plan() {
                                 <div
                                   key={vibe.id}
                                   onClick={() => handleVibeToggle(vibe.id)}
-                                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-lg ${
-                                    isSelected
-                                      ? "border-primary bg-primary/5 shadow-md"
-                                      : "border-border hover:border-primary/50"
-                                  }`}
+                                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-lg ${isSelected
+                                    ? "border-primary bg-primary/5 shadow-md"
+                                    : "border-border hover:border-primary/50"
+                                    }`}
                                 >
                                   <div className="text-center">
                                     <VibeIcon
-                                      className={`w-8 h-8 mx-auto mb-2 ${
-                                        isSelected
-                                          ? "text-primary"
-                                          : "text-muted-foreground"
-                                      }`}
+                                      className={`w-8 h-8 mx-auto mb-2 ${isSelected
+                                        ? "text-primary"
+                                        : "text-muted-foreground"
+                                        }`}
                                     />
                                     <span
-                                      className={`font-medium ${
-                                        isSelected
-                                          ? "text-primary"
-                                          : "text-foreground"
-                                      }`}
+                                      className={`font-medium ${isSelected
+                                        ? "text-primary"
+                                        : "text-foreground"
+                                        }`}
                                     >
                                       {vibe.label}
                                     </span>
@@ -1408,12 +1465,12 @@ export default function Plan() {
                             {field.value?.[0] === 1
                               ? "Very relaxed"
                               : field.value?.[0] === 2
-                              ? "Mostly relaxed"
-                              : field.value?.[0] === 3
-                              ? "Balanced"
-                              : field.value?.[0] === 4
-                              ? "Quite busy"
-                              : "Action-packed"}
+                                ? "Mostly relaxed"
+                                : field.value?.[0] === 3
+                                  ? "Balanced"
+                                  : field.value?.[0] === 4
+                                    ? "Quite busy"
+                                    : "Action-packed"}
                           </FormDescription>
                         </FormItem>
                       )}
@@ -1502,11 +1559,10 @@ export default function Plan() {
             {/* Submission Message */}
             {submitMessage && (
               <div
-                className={`p-4 rounded-lg border text-center font-medium ${
-                  submitMessage.includes("🎉")
-                    ? "bg-green-50 border-green-200 text-green-800"
-                    : "bg-red-50 border-red-200 text-red-800"
-                }`}
+                className={`p-4 rounded-lg border text-center font-medium ${submitMessage.includes("🎉")
+                  ? "bg-green-50 border-green-200 text-green-800"
+                  : "bg-red-50 border-red-200 text-red-800"
+                  }`}
               >
                 {submitMessage}
               </div>

@@ -79,9 +79,10 @@ async def convert_to_model(input_text: str, target_model: Type[T]) -> str:
     2. '## Hotel recommendations:' -> Extract into 'hotels'
     3. '## Destination Attractions:' -> Extract into 'attractions'
     4. '## Flight recommendations:' -> Extract into 'flights'
-    5. '## Restaurant recommendations:' -> Extract into 'restaurants'
-    6. '## Budget Analysis:' -> Extract into 'budget_insights'
-    7. '## Practical Notes:' -> Extract into 'tips'
+    5. '## Train recommendations:' -> Extract into 'trains' (for domestic India trips)
+    6. '## Restaurant recommendations:' -> Extract into 'restaurants'
+    7. '## Budget Analysis:' -> Extract into 'budget_insights'
+    8. '## Practical Notes:' -> Extract into 'tips'
 
     Model schema:
     {schema_str}
@@ -91,6 +92,7 @@ async def convert_to_model(input_text: str, target_model: Type[T]) -> str:
     - If a section is missing from the input, return an empty list [] for that field.
     - For hotels, ensure 'hotel_name', 'price', 'rating', 'address', 'amenities', 'description', and 'url' are populated accurately.
     - For itinerary days, ensure 'morning', 'afternoon', and 'evening' have descriptive content.
+    - For trains (domestic India only), ensure 'train_number', 'train_name', 'departure_station', 'arrival_station', 'departure_time', 'arrival_time', 'duration', 'classes_available', and fare fields are populated.
     - URLs MUST start with http:// or https://. Never use "N/A".
 
     Input research text:
