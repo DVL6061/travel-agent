@@ -109,7 +109,7 @@ async def test_train():
     print(response.messages[-1].content)
     print("=" * 70)
 
-
+r'''
 async def test_train_with_custom_route():
     """Test with a custom route - you can modify this."""
     
@@ -152,7 +152,7 @@ async def test_train_with_custom_route():
     print("=" * 70)
     print(response.messages[-1].content)
     print("=" * 70)
-
+'''
 
 if __name__ == "__main__":
     print("\n" + "🚂" * 35 + "\n")
