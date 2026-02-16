@@ -5,7 +5,7 @@ The AI converts city names to station codes automatically.
 """
 
 from agno.agent import Agent
-from tools.indian_train import get_indian_trains
+from tools.indian_train_mcp import get_mcp_tools, TRAIN_MCP_AGENT_INSTRUCTIONS
 from config.llm import model
 
 
@@ -14,56 +14,9 @@ train_search_agent = Agent(
     name="Train Search Assistant",
     model=model,
     tools=[
-        get_indian_trains,
+        get_mcp_tools(),
     ],
-    instructions=[
-        "You are an expert Indian Railways train search tool. You MUST follow these STRICT RULES when calling the 'get_trains' tool:",
-        "",
-        "1. STRICT PARAMETER MAPPING:",
-        "   - 'source': Use Indian railway station code (e.g., 'NDLS' for New Delhi, 'BCT' for Mumbai Central)",
-        "   - 'destination': Use Indian railway station code",
-        "   - 'date': Use ONLY 'YYYY-MM-DD' format",
-        "   - 'adults': MUST be an integer",
-        "   - 'children': MUST be an integer",
-        "   - 'preferred_class': MUST be one of: '1A', '2A', '3A', 'SL', 'GEN', or 'any'",
-        "",
-        "2. COMMON STATION CODES (use your knowledge for others):",
-        "   - New Delhi: NDLS",
-        "   - Delhi Junction: DLI",
-        "   - Mumbai Central: BCT",
-        "   - Mumbai CST: CSMT",
-        "   - Chennai Central: MAS",
-        "   - Kolkata Howrah: HWH",
-        "   - Bangalore City: SBC",
-        "   - Hyderabad: HYB / SC (Secunderabad)",
-        "   - Ahmedabad: ADI",
-        "   - Pune: PUNE",
-        "   - Jaipur: JP",
-        "   - Goa Madgaon: MAO",
-        "   - Lucknow: LKO",
-        "   - Varanasi: BSB",
-        "",
-        "3. WORKFLOW:",
-        "   - First, convert city names to station codes using your knowledge",
-        "   - Then, call 'get_trains' with the correctly formatted station codes",
-        "   - Finally, extract and format train details for the final report",
-        "",
-        "4. TRAIN DATA TO EXTRACT:",
-        "   - train_number, train_name",
-        "   - departure_station, arrival_station (with codes)",
-        "   - departure_time, arrival_time",
-        "   - duration, distance",
-        "   - classes_available (1A, 2A, 3A, SL, GEN)",
-        "   - fare_1ac, fare_2ac, fare_3ac, fare_sleeper, fare_general",
-        "   - train_type (Rajdhani, Shatabdi, Express, etc.)",
-        "   - pantry_available, running_days",
-        "   - booking_url (use the source URL from search results, e.g. indiarailinfo.com, railyatri.in, erail.in, trainman.in, etc.)",
-        "",
-        "5. FORBIDDEN BEHAVIOR:",
-        "   - NEVER use city names directly as station codes",
-        "   - NEVER skip fare information if available",
-        "   - NEVER return trains that don't run on the requested date",
-    ],
+    instructions=TRAIN_MCP_AGENT_INSTRUCTIONS,
     expected_output="""
       Detailed train list including:
       - train_number (str): The train number (e.g., '12951')
@@ -80,7 +33,7 @@ train_search_agent = Agent(
       - train_type (str): Type of train (e.g., 'Rajdhani')
       - pantry_available (str): Food service (e.g., 'Yes')
       - stops (int): Number of stops
-      - booking_url (str): Source URL from search results (indiarailinfo.com, railyatri.in, erail.in, trainman.in, etc.)
+      - booking_url (str): URL for booking (e.g., 'https://www.irctc.co.in/')
     """,
     markdown=True,
 )
