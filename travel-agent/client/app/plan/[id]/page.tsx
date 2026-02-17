@@ -131,10 +131,8 @@ interface TripDetails {
   // Raw agent responses
   budget_agent_response?: string;
   destination_agent_response?: string;
-  flight_agent_response?: string;
-  // --- NEW CODE: Train Agent Response ---
-  train_agent_response?: string;
-  // --- END NEW CODE ---
+  flight_agent_response?: string | null; // null = agent skipped, string = agent ran
+  train_agent_response?: string | null; // null = agent skipped, string = agent ran
   restaurant_agent_response?: string;
   itinerary_agent_response?: string;
   current_step?: string;
@@ -302,9 +300,11 @@ export default function TripDetailsPage() {
         let itinerary: Itinerary | undefined;
 
         // Extract all agent responses from the parsed JSON
+        // null = agent was skipped, "" or string = agent ran
         let budget_agent_response = "";
         let destination_agent_response = "";
-        let flight_agent_response = "";
+        let flight_agent_response: string | null = null;
+        let train_agent_response: string | null = null;
         let restaurant_agent_response = "";
         let itinerary_agent_response = "";
 
@@ -318,7 +318,8 @@ export default function TripDetailsPage() {
             budget_agent_response = parsedOutput.budget_agent_response || "";
             destination_agent_response =
               parsedOutput.destination_agent_response || "";
-            flight_agent_response = parsedOutput.flight_agent_response || "";
+            flight_agent_response = parsedOutput.flight_agent_response ?? null;
+            train_agent_response = parsedOutput.train_agent_response ?? null;
             restaurant_agent_response =
               parsedOutput.restaurant_agent_response || "";
             itinerary_agent_response =
@@ -348,6 +349,7 @@ export default function TripDetailsPage() {
           budget_agent_response,
           destination_agent_response,
           flight_agent_response,
+          train_agent_response,
           restaurant_agent_response,
           itinerary_agent_response,
           // Input details
@@ -864,16 +866,18 @@ export default function TripDetailsPage() {
             <TabsTrigger value="hotels" className="flex items-center">
               <Home className="h-4 w-4 mr-2" /> Hotels
             </TabsTrigger>
-            <TabsTrigger value="flights" className="flex items-center">
-              <Plane className="h-4 w-4 mr-2" /> Flights
-            </TabsTrigger>
-            {/* --- NEW CODE: Trains Tab (dynamic - only shows if trains exist) --- */}
-            {trip.itinerary?.trains && trip.itinerary.trains.length > 0 && (
+            {/* Flight Tab: Only show if flight agent ran */}
+            {trip.flight_agent_response !== null && (
+              <TabsTrigger value="flights" className="flex items-center">
+                <Plane className="h-4 w-4 mr-2" /> Flights
+              </TabsTrigger>
+            )}
+            {/* Train Tab: Only show if train agent ran */}
+            {trip.train_agent_response !== null && (
               <TabsTrigger value="trains" className="flex items-center">
                 <Train className="h-4 w-4 mr-2" /> Trains
               </TabsTrigger>
             )}
-            {/* --- END NEW CODE --- */}
             <TabsTrigger value="dining" className="flex items-center">
               <Utensils className="h-4 w-4 mr-2" /> Dining
             </TabsTrigger>
@@ -1187,144 +1191,140 @@ export default function TripDetailsPage() {
             )}
           </TabsContent>
 
-          {/* Flights Tab Content */}
-          <TabsContent value="flights" className="space-y-8">
-            {trip.flight_agent_response ||
-              (trip.itinerary &&
+          {/* Flights Tab Content - Only render if flight agent ran */}
+          {trip.flight_agent_response !== null && (
+            <TabsContent value="flights" className="space-y-8">
+              {trip.itinerary &&
                 trip.itinerary.flights &&
-                trip.itinerary.flights.length > 0) ? (
-              <div className="space-y-8">
-                {/* Flights from itinerary */}
-                {trip.itinerary &&
-                  trip.itinerary.flights &&
-                  trip.itinerary.flights.length > 0 && (
-                    <section>
-                      <h2 className="text-2xl font-semibold mb-6 flex items-center">
-                        <Plane className="mr-3 h-6 w-6 text-primary" /> Selected
-                        Flights
-                      </h2>
-                      <div className="space-y-6">
-                        {trip.itinerary.flights
-                          .filter(
-                            (flight) =>
-                              flight.airline !== "TBD" &&
-                              flight.departure_time !== "TBD"
-                          )
-                          .map((flight, index) => (
-                            <Card
-                              key={index}
-                              className="border-r-4 border-r-primary overflow-hidden"
-                            >
-                              <CardHeader className="bg-muted/30">
-                                <CardTitle className="text-xl flex items-center">
-                                  <Plane className="h-5 w-5 mr-2 text-primary" />
-                                  {flight.airline}
-                                </CardTitle>
-                                {flight.flight_number &&
-                                  flight.flight_number !== "N/A" &&
-                                  flight.flight_number !== "TBD" && (
-                                    <CardDescription>
-                                      Flight {flight.flight_number}
-                                    </CardDescription>
-                                  )}
-                              </CardHeader>
-                              <CardContent className="py-6">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                                  <div className="bg-muted/20 p-3 rounded-lg">
-                                    <p className="font-medium flex items-center">
-                                      <Clock className="h-4 w-4 mr-2 text-primary" />
-                                      Duration:
-                                    </p>
-                                    <p className="text-muted-foreground mt-1">
-                                      {flight.duration}
-                                    </p>
-                                  </div>
-                                  <div className="bg-muted/20 p-3 rounded-lg">
-                                    <p className="font-medium flex items-center">
-                                      <DollarSign className="h-4 w-4 mr-2 text-primary" />
-                                      Price:
-                                    </p>
-                                    <p className="text-muted-foreground mt-1">
-                                      {flight.price}
-                                    </p>
-                                  </div>
-                                  <div className="bg-muted/20 p-3 rounded-lg">
-                                    <p className="font-medium flex items-center">
-                                      <Clock className="h-4 w-4 mr-2 text-green-500" />
-                                      Departure:
-                                    </p>
-                                    <p className="text-muted-foreground mt-1">
-                                      {flight.departure_time || "Not specified"}
-                                    </p>
-                                  </div>
-                                  <div className="bg-muted/20 p-3 rounded-lg">
-                                    <p className="font-medium flex items-center">
-                                      <Clock className="h-4 w-4 mr-2 text-red-500" />
-                                      Arrival:
-                                    </p>
-                                    <p className="text-muted-foreground mt-1">
-                                      {flight.arrival_time || "Not specified"}
-                                    </p>
-                                  </div>
-                                  {typeof flight.stops !== "undefined" && (
-                                    <div className="bg-muted/20 p-3 rounded-lg">
-                                      <p className="font-medium">Stops:</p>
-                                      <p className="text-muted-foreground mt-1">
-                                        {flight.stops}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              </CardContent>
-                              {flight.url &&
-                                flight.url !== "N/A" &&
-                                flight.url !== "TBD" && (
-                                  <CardFooter className="bg-muted/30 border-t">
-                                    <a
-                                      href={flight.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-primary hover:underline text-sm flex items-center"
-                                    >
-                                      Book / View Flight{" "}
-                                      <Globe className="h-4 w-4 ml-1.5" />
-                                    </a>
-                                  </CardFooter>
+                trip.itinerary.flights.length > 0 ? (
+                <div className="space-y-8">
+                  {/* Flights from itinerary */}
+                  <section>
+                    <h2 className="text-2xl font-semibold mb-6 flex items-center">
+                      <Plane className="mr-3 h-6 w-6 text-primary" /> Selected
+                      Flights
+                    </h2>
+                    <div className="space-y-6">
+                      {trip.itinerary.flights
+                        .filter(
+                          (flight) =>
+                            flight.airline !== "TBD" &&
+                            flight.departure_time !== "TBD"
+                        )
+                        .map((flight, index) => (
+                          <Card
+                            key={index}
+                            className="border-r-4 border-r-primary overflow-hidden"
+                          >
+                            <CardHeader className="bg-muted/30">
+                              <CardTitle className="text-xl flex items-center">
+                                <Plane className="h-5 w-5 mr-2 text-primary" />
+                                {flight.airline}
+                              </CardTitle>
+                              {flight.flight_number &&
+                                flight.flight_number !== "N/A" &&
+                                flight.flight_number !== "TBD" && (
+                                  <CardDescription>
+                                    Flight {flight.flight_number}
+                                  </CardDescription>
                                 )}
-                            </Card>
-                          ))}
-                      </div>
-                    </section>
-                  )}
-              </div>
-            ) : (
-              <div className="text-center py-10 border rounded-lg">
-                <Info
-                  size={48}
-                  className="text-muted-foreground mx-auto mb-4"
-                />
-                <h2 className="text-xl font-semibold mb-2">
-                  Flight Information Not Available
-                </h2>
-                <p className="text-muted-foreground">
-                  Flight information is not available for this trip.
-                </p>
-              </div>
-            )}
-          </TabsContent>
-
-          {/* --- NEW CODE: Trains Tab Content --- */}
-          <TabsContent value="trains" className="space-y-8">
-            {trip.train_agent_response ||
-              (trip.itinerary?.trains && trip.itinerary.trains.length > 0) ? (
-              <div className="space-y-8">
-                <section>
-                  <h2 className="text-2xl font-bold flex items-center mb-6 text-foreground">
-                    <Train className="h-6 w-6 mr-2 text-primary" />
-                    Train Options (Indian Railways)
+                            </CardHeader>
+                            <CardContent className="py-6">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                <div className="bg-muted/20 p-3 rounded-lg">
+                                  <p className="font-medium flex items-center">
+                                    <Clock className="h-4 w-4 mr-2 text-primary" />
+                                    Duration:
+                                  </p>
+                                  <p className="text-muted-foreground mt-1">
+                                    {flight.duration}
+                                  </p>
+                                </div>
+                                <div className="bg-muted/20 p-3 rounded-lg">
+                                  <p className="font-medium flex items-center">
+                                    <DollarSign className="h-4 w-4 mr-2 text-primary" />
+                                    Price:
+                                  </p>
+                                  <p className="text-muted-foreground mt-1">
+                                    {flight.price}
+                                  </p>
+                                </div>
+                                <div className="bg-muted/20 p-3 rounded-lg">
+                                  <p className="font-medium flex items-center">
+                                    <Clock className="h-4 w-4 mr-2 text-green-500" />
+                                    Departure:
+                                  </p>
+                                  <p className="text-muted-foreground mt-1">
+                                    {flight.departure_time || "Not specified"}
+                                  </p>
+                                </div>
+                                <div className="bg-muted/20 p-3 rounded-lg">
+                                  <p className="font-medium flex items-center">
+                                    <Clock className="h-4 w-4 mr-2 text-red-500" />
+                                    Arrival:
+                                  </p>
+                                  <p className="text-muted-foreground mt-1">
+                                    {flight.arrival_time || "Not specified"}
+                                  </p>
+                                </div>
+                                {typeof flight.stops !== "undefined" && (
+                                  <div className="bg-muted/20 p-3 rounded-lg">
+                                    <p className="font-medium">Stops:</p>
+                                    <p className="text-muted-foreground mt-1">
+                                      {flight.stops}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </CardContent>
+                            {flight.url &&
+                              flight.url !== "N/A" &&
+                              flight.url !== "TBD" && (
+                                <CardFooter className="bg-muted/30 border-t">
+                                  <a
+                                    href={flight.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:underline text-sm flex items-center"
+                                  >
+                                    Book / View Flight{" "}
+                                    <Globe className="h-4 w-4 ml-1.5" />
+                                  </a>
+                                </CardFooter>
+                              )}
+                          </Card>
+                        ))}
+                    </div>
+                  </section>
+                </div>
+              ) : (
+                <div className="text-center py-10 border rounded-lg bg-muted/20">
+                  <Info
+                    size={48}
+                    className="text-muted-foreground mx-auto mb-4"
+                  />
+                  <h2 className="text-xl font-semibold mb-3">
+                    Flight Information Currently Unavailable
                   </h2>
-                  {/* Show structured train cards if available */}
-                  {trip.itinerary?.trains && trip.itinerary.trains.length > 0 && (
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    We couldn't retrieve flight information at this time. Our data sources may be temporarily unavailable. Please try again later with a new trip plan.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          )}
+
+          {/* Trains Tab Content - Only render if train agent ran */}
+          {trip.train_agent_response !== null && (
+            <TabsContent value="trains" className="space-y-8">
+              {trip.itinerary?.trains && trip.itinerary.trains.length > 0 ? (
+                <div className="space-y-8">
+                  <section>
+                    <h2 className="text-2xl font-bold flex items-center mb-6 text-foreground">
+                      <Train className="h-6 w-6 mr-2 text-primary" />
+                      Train Options (Indian Railways)
+                    </h2>
+                    {/* Show structured train cards if available */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {trip.itinerary.trains.map((train, index) => (
                         <Card key={index} className="hover:shadow-lg transition-shadow bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-950/20 dark:to-yellow-950/20">
@@ -1454,22 +1454,22 @@ export default function TripDetailsPage() {
                         </Card>
                       ))}
                     </div>
-                  )}
-                </section>
-              </div>
-            ) : (
-              <div className="text-center py-10 border rounded-lg">
-                <Info size={48} className="text-muted-foreground mx-auto mb-4" />
-                <h2 className="text-xl font-semibold mb-2">
-                  Train Information Not Available
-                </h2>
-                <p className="text-muted-foreground">
-                  Train options are only available for domestic India trips.
-                </p>
-              </div>
-            )}
-          </TabsContent>
-          {/* --- END NEW CODE --- */}
+                  </section>
+                </div>
+              ) : (
+                <div className="text-center py-10 border rounded-lg bg-muted/20">
+                  <Info size={48} className="text-muted-foreground mx-auto mb-4" />
+                  <h2 className="text-xl font-semibold mb-3">
+                    Train Information Currently Unavailable
+                  </h2>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    We couldn't retrieve train information at this time. Our data sources may be temporarily unavailable. Please try again later with a new trip plan.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          )}
+
 
           {/* Dining Tab Content */}
           <TabsContent value="dining" className="space-y-8">
