@@ -483,9 +483,14 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
                 IMPORTANT:
                 - Search for trains between {request.travel_plan.starting_location} and {request.travel_plan.destination}
                 - Use Indian Railway station codes (like airport codes) for the search
-                - Provide detailed information including fares for all available classes (1AC, 2AC, 3AC, Sleeper, General)
                 - Include departure/arrival times, duration, train name, and running days
                 - Give top 5 trains with the best options for the travel dates.
+                
+                CRITICAL - FARE INFORMATION IS MANDATORY:
+                - You MUST provide fare information for ALL available classes (1AC, 2AC, 3AC, Sleeper, General)
+                - Use the Get-seat-availability tool to retrieve actual fare data for each class
+                - NEVER leave fare fields empty - if unavailable, use "Not available"
+                - Fare data is essential for users to make booking decisions
                 """
             )
             

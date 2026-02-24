@@ -34,6 +34,11 @@ import {
   Lightbulb,
   Utensils,
   Receipt,
+  Timer, // For Destination Guide duration
+  Ticket, // For entry fee in Destination Guide
+  Compass, // For Popular Areas section
+  Navigation, // For Common Activities
+  Sparkles, // For section headers
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -1034,25 +1039,472 @@ export default function TripDetailsPage() {
           {/* Guide Tab Content */}
           <TabsContent value="guide" className="space-y-8">
             {trip.destination_agent_response ? (
-              <Card className="overflow-hidden">
-                <CardHeader className="bg-muted/30">
-                  <CardTitle className="flex items-center">
-                    <Lightbulb className="h-5 w-5 mr-2 text-primary" />{" "}
-                    Destination Guide
-                  </CardTitle>
-                  <CardDescription>
-                    Tourist information and recommendations for{" "}
-                    {trip.destination}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg">
-                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                      {trip.destination_agent_response}
-                    </ReactMarkdown>
+              (() => {
+                // ==========================================
+                // DESTINATION GUIDE PARSER - 4 SECTION LAYOUT
+                // ==========================================
+
+                interface MainAttraction {
+                  name: string;
+                  description: string;
+                  location?: string;
+                  hours?: string;
+                  entry?: string;
+                  duration?: string;
+                  tip?: string;
+                  icon: string;
+                }
+
+                interface SimpleItem {
+                  name: string;
+                  description: string;
+                  icon: string;
+                }
+
+                interface BasicInfoItem {
+                  label: string;
+                  value: string;
+                  icon: string;
+                }
+
+                interface ParsedGuide {
+                  mainAttractions: MainAttraction[];
+                  commonActivities: SimpleItem[];
+                  popularAreas: SimpleItem[];
+                  basicInfo: BasicInfoItem[];
+                }
+
+                const getAttractionIcon = (name: string, desc: string): string => {
+                  const combined = (name + " " + (desc || "")).toLowerCase();
+                  if (combined.includes("temple") || combined.includes("mandir") || combined.includes("church") || combined.includes("mosque") || combined.includes("cathedral") || combined.includes("pagoda") || combined.includes("kali")) return "🛕";
+                  if (combined.includes("museum") || combined.includes("gallery") || combined.includes("sangrahalaya") || combined.includes("memorial") || combined.includes("victoria")) return "🏛️";
+                  if (combined.includes("fort") || combined.includes("palace") || combined.includes("castle") || combined.includes("mahal")) return "🏰";
+                  if (combined.includes("beach") || combined.includes("coast") || combined.includes("marina")) return "🏖️";
+                  if (combined.includes("park") || combined.includes("garden") || combined.includes("eco") || combined.includes("botanical")) return "🌳";
+                  if (combined.includes("monument") || combined.includes("gateway") || combined.includes("tower") || combined.includes("arch") || combined.includes("pillar")) return "🗼";
+                  if (combined.includes("railway") || combined.includes("station") || combined.includes("train") || combined.includes("terminus") || combined.includes("howrah")) return "🚂";
+                  if (combined.includes("bridge")) return "🌉";
+                  if (combined.includes("cave") || combined.includes("elephanta")) return "⛰️";
+                  if (combined.includes("market") || combined.includes("bazaar") || combined.includes("shopping") || combined.includes("new market")) return "🛍️";
+                  if (combined.includes("lake") || combined.includes("river") || combined.includes("ganga") || combined.includes("ganges") || combined.includes("boat")) return "🌊";
+                  if (combined.includes("walk") || combined.includes("promenade") || combined.includes("street")) return "🚶";
+                  if (combined.includes("ghat") || combined.includes("dhobi") || combined.includes("laundry")) return "🧺";
+                  if (combined.includes("food") || combined.includes("cook") || combined.includes("cuisine") || combined.includes("restaurant") || combined.includes("dining") || combined.includes("street food")) return "🍽️";
+                  if (combined.includes("yoga") || combined.includes("wellness") || combined.includes("meditation")) return "🧘";
+                  if (combined.includes("bollywood") || combined.includes("film") || combined.includes("cinema")) return "🎬";
+                  if (combined.includes("culture") || combined.includes("art") || combined.includes("heritage") || combined.includes("performance") || combined.includes("dance") || combined.includes("music")) return "🎭";
+                  if (combined.includes("cemetery") || combined.includes("tomb")) return "🪦";
+                  if (combined.includes("zoo") || combined.includes("aquarium")) return "🦁";
+                  if (combined.includes("pottery") || combined.includes("craft") || combined.includes("kumartuli")) return "🏺";
+                  return "📍";
+                };
+
+                const getActivityIcon = (name: string, desc: string): string => {
+                  const combined = (name + " " + (desc || "")).toLowerCase();
+                  if (combined.includes("food") || combined.includes("eat") || combined.includes("cook") || combined.includes("culinary") || combined.includes("cuisine") || combined.includes("vegetarian")) return "🍜";
+                  if (combined.includes("boat") || combined.includes("cruise") || combined.includes("river") || combined.includes("ganges")) return "🚣";
+                  if (combined.includes("shop") || combined.includes("market") || combined.includes("bazaar") || combined.includes("buy")) return "🛒";
+                  if (combined.includes("walk") || combined.includes("tour") || combined.includes("trek") || combined.includes("hike")) return "🚶";
+                  if (combined.includes("culture") || combined.includes("performance") || combined.includes("dance") || combined.includes("music") || combined.includes("attend")) return "🎭";
+                  if (combined.includes("pottery") || combined.includes("craft") || combined.includes("art") || combined.includes("visit")) return "🎨";
+                  if (combined.includes("photo") || combined.includes("view") || combined.includes("scenic")) return "📸";
+                  if (combined.includes("yoga") || combined.includes("meditation") || combined.includes("wellness")) return "🧘";
+                  if (combined.includes("night") || combined.includes("party") || combined.includes("bar") || combined.includes("pub")) return "🌃";
+                  return "✨";
+                };
+
+                const getAreaIcon = (name: string, desc: string): string => {
+                  const combined = (name + " " + (desc || "")).toLowerCase();
+                  if (combined.includes("restaurant") || combined.includes("food") || combined.includes("dining") || combined.includes("nightlife")) return "🍽️";
+                  if (combined.includes("shop") || combined.includes("market") || combined.includes("commercial")) return "🛍️";
+                  if (combined.includes("book") || combined.includes("college") || combined.includes("university") || combined.includes("education")) return "📚";
+                  if (combined.includes("modern") || combined.includes("new") || combined.includes("urban") || combined.includes("town")) return "🏙️";
+                  if (combined.includes("historic") || combined.includes("old") || combined.includes("heritage")) return "🏛️";
+                  if (combined.includes("beach") || combined.includes("waterfront") || combined.includes("coast")) return "🏖️";
+                  if (combined.includes("park") || combined.includes("garden") || combined.includes("green")) return "🌳";
+                  return "📌";
+                };
+
+                const getBasicInfoIcon = (label: string): string => {
+                  const lower = label.toLowerCase();
+                  if (lower.includes("food") || lower.includes("vegetarian") || lower.includes("cuisine") || lower.includes("dining")) return "🥗";
+                  if (lower.includes("transport") || lower.includes("getting") || lower.includes("taxi") || lower.includes("metro") || lower.includes("bus")) return "🚌";
+                  if (lower.includes("safety") || lower.includes("safe") || lower.includes("security")) return "🛡️";
+                  if (lower.includes("weather") || lower.includes("climate") || lower.includes("best time") || lower.includes("visit")) return "🌤️";
+                  if (lower.includes("currency") || lower.includes("money") || lower.includes("atm") || lower.includes("bank")) return "💰";
+                  if (lower.includes("language") || lower.includes("speak") || lower.includes("communication")) return "🗣️";
+                  if (lower.includes("emergency") || lower.includes("hospital") || lower.includes("police") || lower.includes("help")) return "🚨";
+                  if (lower.includes("internet") || lower.includes("wifi") || lower.includes("sim") || lower.includes("phone")) return "📱";
+                  return "ℹ️";
+                };
+
+                const clean = (t: string): string => t.replace(/\*\*/g, "").replace(/^\*|\*$/g, "").trim();
+
+                const parseDestinationGuide = (text: string): ParsedGuide => {
+                  const result: ParsedGuide = {
+                    mainAttractions: [],
+                    commonActivities: [],
+                    popularAreas: [],
+                    basicInfo: [],
+                  };
+
+                  // Split into sections
+                  type SectionType = "main" | "activities" | "areas" | "info" | "none";
+                  let currentSection: SectionType = "none";
+                  let currentAttraction: any = null;
+
+                  const pushCurrentAttraction = () => {
+                    if (currentAttraction && currentAttraction.name && currentSection === "main") {
+                      const n = clean(currentAttraction.name);
+                      result.mainAttractions.push({
+                        name: n,
+                        description: clean(currentAttraction.description || ""),
+                        location: currentAttraction.location ? clean(currentAttraction.location) : undefined,
+                        hours: currentAttraction.hours ? clean(currentAttraction.hours) : undefined,
+                        entry: currentAttraction.entry ? clean(currentAttraction.entry) : undefined,
+                        duration: currentAttraction.duration ? clean(currentAttraction.duration) : undefined,
+                        tip: currentAttraction.tip ? clean(currentAttraction.tip) : undefined,
+                        icon: getAttractionIcon(n, currentAttraction.description || ""),
+                      });
+                    }
+                    currentAttraction = null;
+                  };
+
+                  const detectSection = (line: string): SectionType | null => {
+                    const lower = line.replace(/[#*_\-•]/g, "").trim().toLowerCase();
+                    if (lower === "main attractions" || lower === "top attractions" || lower === "key attractions" || lower === "major attractions") return "main";
+                    if (lower === "common activities" || lower === "activities" || lower === "things to do" || lower === "experiences") return "activities";
+                    if (lower === "popular areas" || lower === "neighborhoods" || lower === "areas" || lower === "notable areas" || lower === "key areas") return "areas";
+                    if (lower === "basic information" || lower === "practical information" || lower === "useful information" || lower === "essential information" || lower === "travel tips" || lower === "general tips" || lower === "quick tips") return "info";
+                    if (lower === "tourist guide" || lower === "destination guide" || lower === "travel guide") return "none";
+                    return null;
+                  };
+
+                  const lines = text.split("\n");
+
+                  lines.forEach((line) => {
+                    const trimmed = line.trim();
+                    if (!trimmed) return;
+
+                    // Check for markdown headers: ## Section Name
+                    const headerMatch = trimmed.match(/^#{1,3}\s+(.+)$/);
+                    if (headerMatch) {
+                      pushCurrentAttraction();
+                      const section = detectSection(headerMatch[1]);
+                      if (section !== null) currentSection = section;
+                      return;
+                    }
+
+                    // Check for plain section headers
+                    const section = detectSection(trimmed);
+                    if (section !== null) {
+                      pushCurrentAttraction();
+                      currentSection = section;
+                      return;
+                    }
+
+                    // Parse based on current section
+                    if (currentSection === "main") {
+                      // Match bold name: **Name:** Description (colon can be inside or outside **)
+                      const boldMatch = trimmed.match(/^\*\*(.+?):?\*\*:?\s*(.*)$/);
+                      const plainMatch = !boldMatch ? trimmed.match(/^([A-Z][A-Za-z\s\-'().&,]+?):\s+(.+)$/) : null;
+                      const nameMatch = boldMatch || plainMatch;
+
+                      if (nameMatch) {
+                        const name = clean(nameMatch[1]).replace(/:$/, "").trim();
+                        const desc = clean(nameMatch[2] || "");
+                        const lower = name.toLowerCase();
+
+                        // Check if this is metadata for current attraction
+                        if (currentAttraction) {
+                          if (lower === "location" || lower === "address") { currentAttraction.location = desc; return; }
+                          if (lower === "open" || lower === "hours" || lower === "timing" || lower === "opening hours" || lower.startsWith("open")) { currentAttraction.hours = desc; return; }
+                          if (lower === "entry" || lower === "entry fee" || lower === "fee" || lower === "price" || lower === "ticket" || lower === "admission") { currentAttraction.entry = desc; return; }
+                          if (lower === "duration" || lower === "time needed" || lower === "time required") { currentAttraction.duration = desc; return; }
+                          if (lower === "tip" || lower === "note" || lower === "tips" || lower === "pro tip") { currentAttraction.tip = desc; return; }
+                        }
+
+                        // It's a new attraction
+                        if (name.length > 2) {
+                          pushCurrentAttraction();
+                          currentAttraction = { name, description: desc };
+                        }
+                      } else if (currentAttraction) {
+                        // Additional description line
+                        const stripped = clean(trimmed.replace(/^[-•]\s*/, ""));
+                        if (stripped) {
+                          currentAttraction.description = (currentAttraction.description || "") + " " + stripped;
+                        }
+                      }
+                    } else if (currentSection === "activities" || currentSection === "areas") {
+                      // Simple format: **Name:** Description or Name: Description
+                      const boldMatch = trimmed.match(/^\*\*(.+?):?\*\*:?\s*(.*)$/);
+                      const plainMatch = !boldMatch ? trimmed.match(/^([A-Z][A-Za-z\s\-'().&,]+?):\s+(.+)$/) : null;
+                      const listBold = !boldMatch && !plainMatch ? trimmed.match(/^[-•]\s*\*\*(.+?):?\*\*:?\s*(.*)$/) : null;
+                      const match = boldMatch || plainMatch || listBold;
+
+                      if (match) {
+                        const name = clean(match[1]).replace(/:$/, "").trim();
+                        const desc = clean(match[2] || "");
+                        if (name.length > 2) {
+                          const icon = currentSection === "activities" ? getActivityIcon(name, desc) : getAreaIcon(name, desc);
+                          const item: SimpleItem = { name, description: desc, icon };
+                          if (currentSection === "activities") {
+                            result.commonActivities.push(item);
+                          } else {
+                            result.popularAreas.push(item);
+                          }
+                        }
+                      }
+                    } else if (currentSection === "info") {
+                      // Key-value format: **Label:** Value or Label: Value
+                      const boldMatch = trimmed.match(/^\*\*(.+?):?\*\*:?\s*(.*)$/);
+                      const plainMatch = !boldMatch ? trimmed.match(/^([A-Z][A-Za-z\s\-'().&,]+?):\s+(.+)$/) : null;
+                      const match = boldMatch || plainMatch;
+
+                      if (match) {
+                        const label = clean(match[1]).replace(/:$/, "").trim();
+                        const value = clean(match[2] || "");
+                        if (label.length > 1 && value.length > 0) {
+                          result.basicInfo.push({
+                            label,
+                            value,
+                            icon: getBasicInfoIcon(label),
+                          });
+                        }
+                      }
+                    } else if (currentSection === "none") {
+                      // Before any section detected - try to auto-detect
+                      // If we see a bold name with metadata lines after, assume Main Attractions
+                      const boldMatch = trimmed.match(/^\*\*(.+?):?\*\*:?\s*(.*)$/);
+                      if (boldMatch) {
+                        const name = clean(boldMatch[1]).replace(/:$/, "").trim();
+                        const desc = clean(boldMatch[2] || "");
+                        if (name.length > 2 && desc.length > 0) {
+                          currentSection = "main";
+                          pushCurrentAttraction();
+                          currentAttraction = { name, description: desc };
+                        }
+                      }
+                    }
+                  });
+
+                  // Push any remaining attraction
+                  pushCurrentAttraction();
+
+                  return result;
+                };
+
+                const guide = parseDestinationGuide(trip.destination_agent_response);
+                const totalItems = guide.mainAttractions.length + guide.commonActivities.length + guide.popularAreas.length + guide.basicInfo.length;
+                console.log("[Destination Guide] Parsed:", {
+                  mainAttractions: guide.mainAttractions.length,
+                  commonActivities: guide.commonActivities.length,
+                  popularAreas: guide.popularAreas.length,
+                  basicInfo: guide.basicInfo.length,
+                  total: totalItems,
+                });
+
+                return totalItems > 0 ? (
+                  <div className="space-y-10">
+
+                    {/* ===== SECTION 1: MAIN ATTRACTIONS ===== */}
+                    {guide.mainAttractions.length > 0 && (
+                      <section>
+                        <div className="flex items-center mb-6">
+                          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 mr-3">
+                            <Landmark className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <h2 className="text-xl font-semibold">Main Attractions</h2>
+                            <p className="text-sm text-muted-foreground">{guide.mainAttractions.length} must-visit places</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          {guide.mainAttractions.map((attraction, index) => (
+                            <Card
+                              key={index}
+                              className="overflow-hidden border-l-4 border-l-primary hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+                            >
+                              <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent pb-3">
+                                <CardTitle className="text-lg flex items-start gap-3">
+                                  <span className="text-2xl flex-shrink-0 leading-tight">{attraction.icon}</span>
+                                  <span className="leading-snug">{attraction.name}</span>
+                                </CardTitle>
+                                {attraction.location && (
+                                  <CardDescription className="flex items-center mt-1.5 ml-10">
+                                    <MapPin className="h-3.5 w-3.5 mr-1.5 flex-shrink-0 text-primary" />
+                                    <span>{attraction.location}</span>
+                                  </CardDescription>
+                                )}
+                              </CardHeader>
+                              <CardContent className="pt-4 pb-4">
+                                <div className="space-y-3">
+                                  {attraction.description && (
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                      {attraction.description}
+                                    </p>
+                                  )}
+
+                                  {(attraction.hours || attraction.duration || attraction.entry) && (
+                                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
+                                      {attraction.hours && (
+                                        <div className="flex items-center bg-muted/50 px-2.5 py-1.5 rounded-md">
+                                          <Clock className="h-3.5 w-3.5 mr-1.5 text-primary flex-shrink-0" />
+                                          <span className="text-muted-foreground">{attraction.hours}</span>
+                                        </div>
+                                      )}
+                                      {attraction.entry && (
+                                        <div className="flex items-center bg-muted/50 px-2.5 py-1.5 rounded-md">
+                                          <Ticket className="h-3.5 w-3.5 mr-1.5 text-primary flex-shrink-0" />
+                                          <span className="text-muted-foreground">{attraction.entry}</span>
+                                        </div>
+                                      )}
+                                      {attraction.duration && (
+                                        <div className="flex items-center bg-muted/50 px-2.5 py-1.5 rounded-md">
+                                          <Timer className="h-3.5 w-3.5 mr-1.5 text-primary flex-shrink-0" />
+                                          <span className="text-muted-foreground">{attraction.duration}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {attraction.tip && (
+                                    <div className="bg-amber-50 dark:bg-amber-950/20 px-3 py-2.5 rounded-lg border border-amber-200 dark:border-amber-900">
+                                      <div className="flex items-start">
+                                        <Lightbulb className="h-3.5 w-3.5 mr-2 mt-0.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                                        <p className="text-xs text-amber-900 dark:text-amber-100 leading-relaxed">
+                                          {attraction.tip}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* ===== SECTION 2: COMMON ACTIVITIES ===== */}
+                    {guide.commonActivities.length > 0 && (
+                      <section>
+                        <div className="flex items-center mb-6">
+                          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/10 mr-3">
+                            <Navigation className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <div>
+                            <h2 className="text-xl font-semibold">Things To Do</h2>
+                            <p className="text-sm text-muted-foreground">{guide.commonActivities.length} popular activities</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {guide.commonActivities.map((activity, index) => (
+                            <Card
+                              key={index}
+                              className="overflow-hidden border-t-2 border-t-emerald-500/50 hover:shadow-md hover:border-t-emerald-500 transition-all duration-200 hover:-translate-y-0.5"
+                            >
+                              <CardContent className="pt-5 pb-4">
+                                <div className="flex items-start gap-3">
+                                  <span className="text-2xl flex-shrink-0">{activity.icon}</span>
+                                  <div className="min-w-0">
+                                    <h3 className="font-semibold text-sm mb-1">{activity.name}</h3>
+                                    <p className="text-xs text-muted-foreground leading-relaxed">{activity.description}</p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* ===== SECTION 3: POPULAR AREAS ===== */}
+                    {guide.popularAreas.length > 0 && (
+                      <section>
+                        <div className="flex items-center mb-6">
+                          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-500/10 mr-3">
+                            <Compass className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                          </div>
+                          <div>
+                            <h2 className="text-xl font-semibold">Popular Areas</h2>
+                            <p className="text-sm text-muted-foreground">{guide.popularAreas.length} neighborhoods to explore</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                          {guide.popularAreas.map((area, index) => (
+                            <div
+                              key={index}
+                              className="group flex items-start gap-3 p-4 rounded-xl border bg-card hover:bg-accent/50 hover:border-orange-300 dark:hover:border-orange-700 transition-all duration-200 cursor-default"
+                            >
+                              <span className="text-xl flex-shrink-0 mt-0.5">{area.icon}</span>
+                              <div className="min-w-0">
+                                <h3 className="font-semibold text-sm mb-0.5 group-hover:text-orange-700 dark:group-hover:text-orange-300 transition-colors">{area.name}</h3>
+                                <p className="text-xs text-muted-foreground leading-relaxed">{area.description}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* ===== SECTION 4: BASIC INFORMATION ===== */}
+                    {guide.basicInfo.length > 0 && (
+                      <section>
+                        <div className="flex items-center mb-6">
+                          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-500/10 mr-3">
+                            <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div>
+                            <h2 className="text-xl font-semibold">Essential Information</h2>
+                            <p className="text-sm text-muted-foreground">Quick facts and practical tips</p>
+                          </div>
+                        </div>
+                        <Card className="overflow-hidden">
+                          <CardContent className="p-0">
+                            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
+                              {guide.basicInfo.map((info, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-start gap-3 p-4 hover:bg-muted/30 transition-colors"
+                                >
+                                  <span className="text-xl flex-shrink-0 mt-0.5">{info.icon}</span>
+                                  <div className="min-w-0">
+                                    <h3 className="font-semibold text-sm text-foreground">{info.label}</h3>
+                                    <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{info.value}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </section>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
+                ) : (
+                  // Fallback to markdown if parsing produces no results
+                  <Card className="overflow-hidden">
+                    <CardHeader className="bg-muted/30">
+                      <CardTitle className="flex items-center">
+                        <Lightbulb className="h-5 w-5 mr-2 text-primary" />{" "}
+                        Destination Guide
+                      </CardTitle>
+                      <CardDescription>
+                        Tourist information and recommendations for{" "}
+                        {trip.destination}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg">
+                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                          {trip.destination_agent_response}
+                        </ReactMarkdown>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()
             ) : (
               <div className="text-center py-10 border rounded-lg">
                 <Info
@@ -1067,6 +1519,7 @@ export default function TripDetailsPage() {
                 </p>
               </div>
             )}
+
           </TabsContent>
 
           {/* Hotels Tab Content */}
@@ -1477,83 +1930,386 @@ export default function TripDetailsPage() {
               (trip.itinerary &&
                 trip.itinerary.restaurants &&
                 trip.itinerary.restaurants.length > 0) ? (
-              <div className="space-y-8">
-                {/* Restaurant suggestions from agent */}
-                {trip.restaurant_agent_response && (
-                  <Card className="overflow-hidden">
-                    <CardHeader className="bg-muted/30">
-                      <CardTitle className="flex items-center">
-                        <Utensils className="h-5 w-5 mr-2 text-primary" />{" "}
-                        Restaurant Recommendations
-                      </CardTitle>
-                      <CardDescription>
-                        Dining options for your trip
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                      <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm, remarkBreaks]}
-                        >
-                          {trip.restaurant_agent_response}
-                        </ReactMarkdown>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+              (() => {
+                // ==========================================
+                // DINING TAB - PARSED CARD LAYOUT
+                // ==========================================
 
-                {/* Restaurants from itinerary */}
-                {trip.itinerary &&
-                  trip.itinerary.restaurants &&
-                  trip.itinerary.restaurants.length > 0 && (
-                    <section>
-                      <h2 className="text-2xl font-semibold mb-6 flex items-center">
-                        <Utensils className="mr-3 h-6 w-6 text-primary" />{" "}
-                        Selected Restaurants
-                      </h2>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {trip.itinerary.restaurants.map((restaurant, index) => (
-                          <Card
-                            key={index}
-                            className="group hover:shadow-md transition-all duration-300 border-b-4 border-b-transparent hover:border-b-primary"
-                          >
-                            <CardHeader>
-                              <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                                {restaurant.name}
-                              </CardTitle>
-                              {restaurant.location && (
-                                <CardDescription className="flex items-center mt-1">
-                                  <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                                  {restaurant.location}
-                                </CardDescription>
-                              )}
-                            </CardHeader>
-                            {restaurant.description && (
-                              <CardContent>
-                                <p className="text-sm text-muted-foreground whitespace-pre-line">
-                                  {restaurant.description}
-                                </p>
+                interface ParsedRestaurant {
+                  name: string;
+                  description: string;
+                  location?: string;
+                  bestTime?: string;
+                  mustTry?: string;
+                  culturalSignificance?: string;
+                  url?: string;
+                  icon: string;
+                }
+
+                interface DiningInfo {
+                  label: string;
+                  value: string;
+                  icon: string;
+                }
+
+                interface ParsedDining {
+                  restaurants: ParsedRestaurant[];
+                  additionalInfo: DiningInfo[];
+                }
+
+                const getDiningIcon = (name: string, desc: string): string => {
+                  const combined = (name + " " + (desc || "")).toLowerCase();
+                  if (combined.includes("street food") || combined.includes("chaat") || combined.includes("snack")) return "\uD83C\uDF5C";
+                  if (combined.includes("market") || combined.includes("bazaar") || combined.includes("crawford")) return "\uD83D\uDED2";
+                  if (combined.includes("cook") || combined.includes("class") || combined.includes("learn")) return "\uD83D\uDC68\u200D\uD83C\uDF73";
+                  if (combined.includes("cafe") || combined.includes("coffee") || combined.includes("tea")) return "\u2615";
+                  if (combined.includes("sweet") || combined.includes("dessert") || combined.includes("mithai")) return "\uD83C\uDF6C";
+                  if (combined.includes("fine dining") || combined.includes("luxury") || combined.includes("premium")) return "\uD83C\uDF7D\uFE0F";
+                  if (combined.includes("vegetarian") || combined.includes("veg") || combined.includes("thali")) return "\uD83E\uDD57";
+                  if (combined.includes("biryani") || combined.includes("mughlai") || combined.includes("kebab") || combined.includes("non-veg")) return "\uD83C\uDF56";
+                  if (combined.includes("fish") || combined.includes("seafood") || combined.includes("coastal")) return "\uD83D\uDC1F";
+                  if (combined.includes("bakery") || combined.includes("bread") || combined.includes("cake")) return "\uD83C\uDF70";
+                  if (combined.includes("juice") || combined.includes("drink") || combined.includes("lassi")) return "\uD83E\uDD64";
+                  if (combined.includes("south indian") || combined.includes("dosa") || combined.includes("idli")) return "\uD83E\uDED3";
+                  return "\uD83C\uDF5D";
+                };
+
+                const getDiningInfoIcon = (label: string): string => {
+                  const lower = label.toLowerCase();
+                  if (lower.includes("food custom") || lower.includes("local food") || lower.includes("cuisine")) return "\uD83E\uDD57";
+                  if (lower.includes("peak") || lower.includes("hour") || lower.includes("timing") || lower.includes("time")) return "\u23F0";
+                  if (lower.includes("transport") || lower.includes("getting") || lower.includes("taxi") || lower.includes("auto")) return "\uD83D\uDE8C";
+                  if (lower.includes("safety") || lower.includes("safe") || lower.includes("hygiene") || lower.includes("food safety")) return "\uD83D\uDEE1\uFE0F";
+                  if (lower.includes("tip") || lower.includes("advice") || lower.includes("recommend")) return "\uD83D\uDCA1";
+                  if (lower.includes("cost") || lower.includes("price") || lower.includes("budget") || lower.includes("cheap")) return "\uD83D\uDCB0";
+                  if (lower.includes("water") || lower.includes("drink") || lower.includes("beverage")) return "\uD83D\uDCA7";
+                  if (lower.includes("reservation") || lower.includes("book") || lower.includes("advance")) return "\uD83D\uDCDD";
+                  return "\u2139\uFE0F";
+                };
+
+                const cleanText = (t: string): string => t.replace(/\*\*/g, "").replace(/^\*|\*$/g, "").trim();
+
+                const parseDiningGuide = (text: string): ParsedDining => {
+                  const result: ParsedDining = {
+                    restaurants: [],
+                    additionalInfo: [],
+                  };
+
+                  let currentSection: "restaurants" | "info" | "none" = "none";
+                  let currentRestaurant: any = null;
+
+                  const pushCurrentRestaurant = () => {
+                    if (currentRestaurant && currentRestaurant.name) {
+                      const n = cleanText(currentRestaurant.name);
+                      if (n.length > 2) {
+                        result.restaurants.push({
+                          name: n,
+                          description: cleanText(currentRestaurant.description || ""),
+                          location: currentRestaurant.location ? cleanText(currentRestaurant.location) : undefined,
+                          bestTime: currentRestaurant.bestTime ? cleanText(currentRestaurant.bestTime) : undefined,
+                          mustTry: currentRestaurant.mustTry ? cleanText(currentRestaurant.mustTry) : undefined,
+                          culturalSignificance: currentRestaurant.culturalSignificance ? cleanText(currentRestaurant.culturalSignificance) : undefined,
+                          url: currentRestaurant.url ? cleanText(currentRestaurant.url) : undefined,
+                          icon: getDiningIcon(n, currentRestaurant.description || ""),
+                        });
+                      }
+                    }
+                    currentRestaurant = null;
+                  };
+
+                  const detectSection = (line: string): "restaurants" | "info" | "skip" | null => {
+                    const lower = line.replace(/[#*_\-\u2022\uD83C-\uDBFF\uDC00-\uDFFF]/gu, "").trim().toLowerCase();
+                    if (lower.includes("food market") || lower.includes("restaurant") || lower.includes("dining spot") || lower.includes("where to eat") || lower.includes("experiences")) return "restaurants";
+                    if (lower.includes("additional information") || lower.includes("practical") || lower.includes("dining tips") || lower.includes("useful info")) return "info";
+                    if (lower.includes("restaurant recommendation") || lower.includes("dining guide") || lower.includes("food guide")) return "skip";
+                    return null;
+                  };
+
+                  const lines = text.split("\n");
+
+                  lines.forEach((line) => {
+                    const trimmed = line.trim();
+                    if (!trimmed) return;
+
+                    // Check markdown headers
+                    const headerMatch = trimmed.match(/^#{1,3}\s+(.+)$/);
+                    if (headerMatch) {
+                      pushCurrentRestaurant();
+                      const section = detectSection(headerMatch[1]);
+                      if (section === "restaurants" || section === "info") currentSection = section;
+                      return;
+                    }
+
+                    // Check plain section headers (with optional emoji prefix)
+                    const section = detectSection(trimmed);
+                    if (section === "restaurants" || section === "info") {
+                      pushCurrentRestaurant();
+                      currentSection = section;
+                      return;
+                    }
+                    if (section === "skip") return;
+
+                    if (currentSection === "restaurants" || currentSection === "none") {
+                      // Match bold name: **Name:** Description (colon inside or outside **)
+                      const boldMatch = trimmed.match(/^\*\*(.+?):?\*\*:?\s*(.*)$/);
+                      const plainMatch = !boldMatch ? trimmed.match(/^([A-Z][A-Za-z\s\-'().&,]+?):\s+(.+)$/) : null;
+                      const nameMatch = boldMatch || plainMatch;
+
+                      if (nameMatch) {
+                        const name = cleanText(nameMatch[1]).replace(/:$/, "").trim();
+                        const desc = cleanText(nameMatch[2] || "");
+                        const lower = name.toLowerCase();
+
+                        // Check if this is metadata for current restaurant
+                        if (currentRestaurant) {
+                          if (lower === "location" || lower === "address" || lower === "area") { currentRestaurant.location = desc; return; }
+                          if (lower === "best time to visit" || lower === "best time" || lower === "timing" || lower === "when to visit") { currentRestaurant.bestTime = desc; return; }
+                          if (lower === "must-try local foods" || lower === "must-try" || lower === "must try" || lower === "speciality" || lower === "specialty" || lower === "signature dishes" || lower === "popular dishes") { currentRestaurant.mustTry = desc; return; }
+                          if (lower === "cultural significance" || lower === "significance" || lower === "history" || lower === "about") { currentRestaurant.culturalSignificance = desc; return; }
+                          if (lower === "url" || lower === "website" || lower === "link" || lower === "book" || lower === "booking") { currentRestaurant.url = desc; return; }
+                          if (lower === "open" || lower === "hours" || lower === "opening hours") { return; } // Skip hours for now
+                        }
+
+                        // It's a new restaurant
+                        if (name.length > 2 && desc.length > 0) {
+                          if (currentSection === "none") currentSection = "restaurants";
+                          pushCurrentRestaurant();
+                          currentRestaurant = { name, description: desc };
+                        }
+                      } else if (currentRestaurant) {
+                        // Check for URL line
+                        const urlMatch = trimmed.match(/^(?:URL|Website|Link):\s*(https?:\/\/.+)$/i);
+                        if (urlMatch) {
+                          currentRestaurant.url = urlMatch[1].trim();
+                        }
+                      }
+                    } else if (currentSection === "info") {
+                      // Key-value format for additional information
+                      const boldMatch = trimmed.match(/^\*\*(.+?):?\*\*:?\s*(.*)$/);
+                      const plainMatch = !boldMatch ? trimmed.match(/^([A-Z][A-Za-z\s\-'().&,]+?):\s+(.+)$/) : null;
+                      const match = boldMatch || plainMatch;
+
+                      if (match) {
+                        const label = cleanText(match[1]).replace(/:$/, "").trim();
+                        const value = cleanText(match[2] || "");
+                        if (label.length > 1 && value.length > 0) {
+                          // Skip farewell/closing messages
+                          const lower = label.toLowerCase();
+                          if (!lower.includes("hope") && !lower.includes("enjoy") && !lower.includes("wish")) {
+                            result.additionalInfo.push({
+                              label,
+                              value,
+                              icon: getDiningInfoIcon(label),
+                            });
+                          }
+                        }
+                      }
+                    }
+                  });
+
+                  // Push any remaining restaurant
+                  pushCurrentRestaurant();
+
+                  return result;
+                };
+
+                // Parse the AI response
+                const parsedDining = trip.restaurant_agent_response
+                  ? parseDiningGuide(trip.restaurant_agent_response)
+                  : { restaurants: [], additionalInfo: [] };
+
+                // Merge with structured restaurant data from itinerary
+                const structuredRestaurants = trip.itinerary?.restaurants || [];
+                const mergedRestaurants: ParsedRestaurant[] = [];
+
+                // Start with parsed restaurants (they have richer data)
+                parsedDining.restaurants.forEach((parsed) => {
+                  const match = structuredRestaurants.find(
+                    (sr) => sr.name.toLowerCase().trim() === parsed.name.toLowerCase().trim()
+                  );
+                  mergedRestaurants.push({
+                    ...parsed,
+                    location: parsed.location || match?.location,
+                    url: parsed.url || match?.url,
+                    description: parsed.description || match?.description || "",
+                  });
+                });
+
+                // Add any structured restaurants not already in parsed list
+                structuredRestaurants.forEach((sr) => {
+                  const alreadyExists = mergedRestaurants.some(
+                    (mr) => mr.name.toLowerCase().trim() === sr.name.toLowerCase().trim()
+                  );
+                  if (!alreadyExists) {
+                    mergedRestaurants.push({
+                      name: sr.name,
+                      description: sr.description || "",
+                      location: sr.location,
+                      url: sr.url,
+                      icon: getDiningIcon(sr.name, sr.description || ""),
+                    });
+                  }
+                });
+
+                const totalItems = mergedRestaurants.length + parsedDining.additionalInfo.length;
+                console.log("[Dining] Parsed:", {
+                  parsedRestaurants: parsedDining.restaurants.length,
+                  structuredRestaurants: structuredRestaurants.length,
+                  merged: mergedRestaurants.length,
+                  additionalInfo: parsedDining.additionalInfo.length,
+                });
+
+                return totalItems > 0 ? (
+                  <div className="space-y-10">
+
+                    {/* ===== RESTAURANT CARDS ===== */}
+                    {mergedRestaurants.length > 0 && (
+                      <section>
+                        <div className="flex items-center mb-6">
+                          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-500/10 mr-3">
+                            <Utensils className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                          </div>
+                          <div>
+                            <h2 className="text-xl font-semibold">Food Markets & Experiences</h2>
+                            <p className="text-sm text-muted-foreground">{mergedRestaurants.length} places to explore</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          {mergedRestaurants.map((restaurant, index) => (
+                            <Card
+                              key={index}
+                              className="overflow-hidden border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+                            >
+                              <CardHeader className="bg-gradient-to-r from-orange-500/5 to-transparent pb-3">
+                                <CardTitle className="text-lg flex items-start gap-3">
+                                  <span className="text-2xl flex-shrink-0 leading-tight">{restaurant.icon}</span>
+                                  <span className="leading-snug">{restaurant.name}</span>
+                                </CardTitle>
+                                {restaurant.location && (
+                                  <CardDescription className="flex items-center mt-1.5 ml-10">
+                                    <MapPin className="h-3.5 w-3.5 mr-1.5 flex-shrink-0 text-orange-500" />
+                                    <span>{restaurant.location}</span>
+                                  </CardDescription>
+                                )}
+                              </CardHeader>
+                              <CardContent className="pt-4 pb-4">
+                                <div className="space-y-3">
+                                  {restaurant.description && (
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                      {restaurant.description}
+                                    </p>
+                                  )}
+
+                                  {(restaurant.bestTime || restaurant.mustTry) && (
+                                    <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
+                                      {restaurant.bestTime && (
+                                        <div className="flex items-center bg-muted/50 px-2.5 py-1.5 rounded-md">
+                                          <Clock className="h-3.5 w-3.5 mr-1.5 text-orange-500 flex-shrink-0" />
+                                          <span className="font-semibold mr-1">Best Time:</span>
+                                          <span className="text-muted-foreground">{restaurant.bestTime}</span>
+                                        </div>
+                                      )}
+                                      {restaurant.mustTry && (
+                                        <div className="flex items-center bg-muted/50 px-2.5 py-1.5 rounded-md">
+                                          <Sparkles className="h-3.5 w-3.5 mr-1.5 text-orange-500 flex-shrink-0" />
+                                          <span className="font-semibold mr-1">Must-Try:</span>
+                                          <span className="text-muted-foreground">{restaurant.mustTry}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {restaurant.culturalSignificance && (
+                                    <div className="bg-amber-50 dark:bg-amber-950/20 px-3 py-2.5 rounded-lg border border-amber-200 dark:border-amber-900">
+                                      <div className="flex items-start">
+                                        <Landmark className="h-3.5 w-3.5 mr-2 mt-0.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                                        <p className="text-xs leading-relaxed">
+                                          <span className="font-semibold text-amber-900 dark:text-amber-100 mr-1">Cultural Significance:</span>
+                                          <span className="text-amber-800 dark:text-amber-200">{restaurant.culturalSignificance}</span>
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </CardContent>
-                            )}
-                            {isValidUrl(restaurant.url) && (
-                              <CardFooter className="bg-muted/30 border-t">
-                                <a
-                                  href={restaurant.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-primary hover:underline text-sm flex items-center"
+                              {isValidUrl(restaurant.url) && (
+                                <CardFooter className="bg-muted/30 border-t py-3">
+                                  <a
+                                    href={restaurant.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-orange-600 dark:text-orange-400 hover:underline text-sm flex items-center font-medium"
+                                  >
+                                    Visit Website
+                                    <Globe className="h-4 w-4 ml-1.5" />
+                                  </a>
+                                </CardFooter>
+                              )}
+                            </Card>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* ===== ADDITIONAL INFORMATION ===== */}
+                    {parsedDining.additionalInfo.length > 0 && (
+                      <section>
+                        <div className="flex items-center mb-6">
+                          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-500/10 mr-3">
+                            <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div>
+                            <h2 className="text-xl font-semibold">Additional Information</h2>
+                            <p className="text-sm text-muted-foreground">Quick facts and practical dining tips</p>
+                          </div>
+                        </div>
+                        <Card className="overflow-hidden">
+                          <CardContent className="p-0">
+                            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
+                              {parsedDining.additionalInfo.map((info, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-start gap-3 p-4 hover:bg-muted/30 transition-colors"
                                 >
-                                  Visit Website{" "}
-                                  <Globe className="h-4 w-4 ml-1.5" />
-                                </a>
-                              </CardFooter>
-                            )}
-                          </Card>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-              </div>
+                                  <span className="text-xl flex-shrink-0 mt-0.5">{info.icon}</span>
+                                  <div className="min-w-0">
+                                    <h3 className="font-semibold text-sm text-foreground">{info.label}</h3>
+                                    <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{info.value}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </section>
+                    )}
+                  </div>
+                ) : (
+                  // Fallback to markdown if parsing produces no results
+                  <div className="space-y-8">
+                    {trip.restaurant_agent_response && (
+                      <Card className="overflow-hidden">
+                        <CardHeader className="bg-muted/30">
+                          <CardTitle className="flex items-center">
+                            <Utensils className="h-5 w-5 mr-2 text-primary" />{" "}
+                            Restaurant Recommendations
+                          </CardTitle>
+                          <CardDescription>
+                            Dining options for your trip
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                          <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg">
+                            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                              {trip.restaurant_agent_response}
+                            </ReactMarkdown>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                );
+              })()
             ) : (
               <div className="text-center py-10 border rounded-lg">
                 <Info
@@ -1568,6 +2324,7 @@ export default function TripDetailsPage() {
                 </p>
               </div>
             )}
+
           </TabsContent>
 
           {/* Budget Tab Content */}
