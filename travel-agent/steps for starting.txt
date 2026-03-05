@@ -48,7 +48,17 @@ Frontend not starting? Check if port 3000 is in use: lsof -i :3000
 Database errors? Verify DATABASE_URL in both .env files
 API key errors? Ensure OpenRouter, Exa, and Firecrawl keys are valid
 
+# Check if Frontend (port 3000) is running
+netstat -ano | findstr :3000
 
+# Check if Backend (port 8000) is running
+netstat -ano | findstr :8000
+
+# Stop Frontend (port 3000)
+Get-Process -Id (Get-NetTCPConnection -LocalPort 3000).OwningProcess | Stop-Process -Force
+
+# Stop Backend (port 8000)
+Get-Process -Id (Get-NetTCPConnection -LocalPort 8000).OwningProcess | Stop-Process -Force
 
 
 starting Backend into antigravity:-
@@ -82,10 +92,11 @@ pip install --upgrade pip
 pip install uv
 uv pip install -e .
 
+## For Backend
 cd travel-agent\backend
 .\venv\Scripts\activate
 python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 
-
+## For Frontend
 cd travel-agent\client
 npm run dev
