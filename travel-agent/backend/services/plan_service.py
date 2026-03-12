@@ -8,7 +8,8 @@ from models.travel_plan import (
     TravelPlanTeamResponse,
 )
 from loguru import logger
-from agents.team import trip_planning_team
+# Team architecture preserved for future use — not called in production
+# from agents.team import trip_planning_team 
 import json
 import time
 import asyncio
